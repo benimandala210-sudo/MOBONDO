@@ -9,6 +9,22 @@ signal conversation_finished(character_id: String, choice_id: String)
 const SAVE_PATH := "user://mobondo_dialogues.json"
 
 const CONVERSATIONS := {
+    "seller_market": {
+        "speaker": "Mama Sifa — moteki ya zando",
+        "opening": "Mbote ndeko! Ozali koluka nini awa na zando?",
+        "choices": [
+            {"id": "ask_market_goods", "text": "Nalingi kotala biloko oyo ozali koteka.", "reply": "Nazali na biloko ya kolia mpe mwa biloko ya ndako. Tala malamu, soki olingi eloko moko loba na ngai.", "affinity": 1, "flag": "met_market_seller"},
+            {"id": "ask_market_job", "text": "Mosala ezali awa na zando?", "reply": "Na ntango mosusu tozalaka na besoin ya lisalisi. Yaka lisusu tongo, okoki kokuta chance.", "affinity": 2, "flag": "heard_seller_job"}
+        ]
+    },
+    "customer_market": {
+        "speaker": "Junior — mosombi",
+        "opening": "Yo ndeko! Zando etondi lelo, bato bazali kosomba mingi.",
+        "choices": [
+            {"id": "ask_market_day", "text": "Zando ezalaka boye mikolo nyonso?", "reply": "Mingi ya mikolo ezalaka na mouvement, kasi na mikolo mosusu bato bazalaka mingi koleka.", "affinity": 1, "flag": "knows_market_rhythm"},
+            {"id": "say_goodbye", "text": "Malamu, tokutana.", "reply": "Tokutana ndeko, kende malamu!", "affinity": 1, "flag": "greeted_junior"}
+        ]
+    },
     "resident_mapela": {
         "speaker": "Mado",
         "opening": "Mbote, ndeko! Oyebi quartier oyo malamu to ozali naino mopaya?",
