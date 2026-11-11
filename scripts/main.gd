@@ -10,6 +10,7 @@ var player: CharacterBody3D
 var camera: Camera3D
 var mission_manager
 var dialogue_manager
+var game_ui_layer: CanvasLayer
 var dialogue_panel: PanelContainer
 var dialogue_speaker_label: Label
 var dialogue_text_label: Label
@@ -195,6 +196,8 @@ func _setup_player() -> void:
 
 func _setup_ui() -> void:
     var layer := CanvasLayer.new()
+    game_ui_layer = layer
+    layer.visible = false
     add_child(layer)
     var panel := PanelContainer.new()
     panel.position = Vector2(16, 16)
@@ -505,6 +508,7 @@ func _play_start_transition() -> void:
     await fade_out.finished
 
     player.set_physics_process(true)
+    game_ui_layer.visible = true
     transition_layer.queue_free()
     transition_active = false
 
