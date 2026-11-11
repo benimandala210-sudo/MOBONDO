@@ -218,7 +218,7 @@ func _setup_main_menu() -> void:
     main_column.add_child(title)
 
     var subtitle := Label.new()
-    subtitle.text = "MOKILI MOKO. BOMOI MOKO. LISolo NA YO."
+    subtitle.text = "MOKILI MOKO. BOMOI MOKO. LISOLO NA YO."
     subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     subtitle.add_theme_font_size_override("font_size", 12)
@@ -282,7 +282,7 @@ func _setup_main_menu() -> void:
     settings_column.add_child(settings_title)
 
     var language_label := Label.new()
-    language_label.text = "MONƆ: LINGALA YA KINSHASA"
+    language_label.text = "LOKOTA: LINGALA YA KINSHASA"
     language_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     language_label.add_theme_color_override("font_color", Color(0.9, 0.87, 0.8))
     settings_column.add_child(language_label)
@@ -312,14 +312,14 @@ func _setup_main_menu() -> void:
 
 func _create_menu_panel(parent: Control) -> PanelContainer:
     var panel := PanelContainer.new()
-    panel.anchor_left = 0.5
-    panel.anchor_top = 0.5
-    panel.anchor_right = 0.5
-    panel.anchor_bottom = 0.5
-    panel.offset_left = -190
-    panel.offset_top = -205
-    panel.offset_right = 190
-    panel.offset_bottom = 205
+    panel.anchor_left = 0.08
+    panel.anchor_top = 0.18
+    panel.anchor_right = 0.92
+    panel.anchor_bottom = 0.82
+    panel.offset_left = 0
+    panel.offset_top = 0
+    panel.offset_right = 0
+    panel.offset_bottom = 0
     panel.add_theme_stylebox_override("panel", _menu_panel_style())
     parent.add_child(panel)
     return panel
@@ -510,6 +510,8 @@ func _on_mission_message(message: String) -> void:
 
 func _update_status() -> void:
     if not is_instance_valid(mission_manager):
+        return
+    if selected_mode == "libre":
         return
     if mission_manager.is_current_episode_completed():
         status_label.text = "Eteni oyo esili. Tokobongisa oyo elandi."
