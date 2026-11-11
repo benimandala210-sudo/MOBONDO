@@ -36,6 +36,7 @@ var menu_taxi: Node3D
 var menu_emblem: Control
 var menu_glow: ColorRect
 var menu_time := 0.0
+var transition_active := false
 
 func _ready() -> void:
     _setup_world()
@@ -71,7 +72,7 @@ func _process(delta: float) -> void:
                 var glow_color := menu_glow.color
                 glow_color.a = 0.12 + (sin(menu_time * 0.7) + 1.0) * 0.025
                 menu_glow.color = glow_color
-        elif is_instance_valid(player):
+        elif is_instance_valid(player) and not transition_active:
             camera.global_position = player.global_position + Vector3(0, 7, 11)
             camera.look_at(player.global_position + Vector3(0, 1, 0), Vector3.UP)
     if not menu_active:
@@ -453,19 +454,59 @@ func _show_main_menu() -> void:
     settings_panel.visible = false
 
 func _start_game(mode: String) -> void:
+    if transition_active or not menu_active:
+        return
     selected_mode = mode
+    transition_active = true
+    _play_start_transition()
+
+func _play_start_transition() -> void:
+    var transition_layer := CanvasLayer.new()
+    transition_layer.layer = 30
+    add_child(transition_layer)
+
+    var veil := ColorRect.new()
+    veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    veil.color = Color.BLACK
+    veil.modulate.a = 0.0
+    veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    transition_layer.add_child(veil)
+
+    var fade_in := create_tween()
+    fade_in.tween_property(veil, "modulate:a", 1.0, 0.45)
+    await fade_in.finished
+
     menu_active = false
     menu_root.visible = false
     if is_instance_valid(player):
+        player.global_position = Vector3(0, 1, 0)
+        player.velocity = Vector3.ZERO
         player.visible = true
-        player.set_physics_process(true)
-    if mode == "histoire":
+        player.set_physics_process(false)
+
+    camera.global_position = Vector3(0, 6.5, 12.0)
+    camera.look_at(Vector3(0, 1.0, 0), Vector3.UP)
+
+    var camera_move := create_tween()
+    camera_move.set_trans(Tween.TRANS_CUBIC)
+    camera_move.set_ease(Tween.EASE_OUT)
+    camera_move.tween_property(camera, "global_position", Vector3(0, 4.2, 8.2), 1.8)
+    await camera_move.finished
+    camera.look_at(player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
+
+    if selected_mode == "histoire":
         status_label.text = "MODE HISTOIRE — Tokoba na eteni ya liboso."
         _refresh_mission()
     else:
         status_label.text = "BOMOI YA LIBRE — Ozali na bonsomi ya kotambola."
-    if is_instance_valid(player):
-        player.set_physics_process(true)
+
+    var fade_out := create_tween()
+    fade_out.tween_property(veil, "modulate:a", 0.0, 0.65)
+    await fade_out.finished
+
+    player.set_physics_process(true)
+    transition_layer.queue_free()
+    transition_active = false
 
 func _setup_dialogue_ui(layer: CanvasLayer) -> void:
     dialogue_panel = PanelContainer.new()
