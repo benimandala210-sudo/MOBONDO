@@ -333,13 +333,13 @@ func _create_market_detail() -> void:
     for i in range(4):
         var x := -5.0 + float(i) * 3.2
         _add_box("Étal marché %d" % i, Vector3(x, 0.85, -21.0), Vector3(2.5, 1.7, 1.8), Color(0.56, 0.31, 0.17))
-        var canopy_color := [Color(0.72, 0.18, 0.12), Color(0.88, 0.72, 0.22), Color(0.18, 0.38, 0.28), Color(0.2, 0.32, 0.55)][i]
+        var canopy_color: Color = [Color(0.72, 0.18, 0.12), Color(0.88, 0.72, 0.22), Color(0.18, 0.38, 0.28), Color(0.2, 0.32, 0.55)][i]
         _add_visual_box("Bâche marché %d" % i, Vector3(x, 2.35, -21.0), Vector3(2.9, 0.12, 2.4), canopy_color)
         for dx in [-1.25, 1.25]:
             for dz in [-1.0, 1.0]:
                 _add_visual_box("Poteau étal", Vector3(x + dx, 1.55, -21.0 + dz), Vector3(0.09, 1.5, 0.09), Color(0.25, 0.2, 0.15))
         for item_index in range(3):
-            var produce_color := [Color(0.78, 0.15, 0.1), Color(0.82, 0.52, 0.12), Color(0.25, 0.55, 0.2)][item_index]
+            var produce_color: Color = [Color(0.78, 0.15, 0.1), Color(0.82, 0.52, 0.12), Color(0.25, 0.55, 0.2)][item_index]
             _add_visual_box("Marchandise", Vector3(x - 0.65 + float(item_index) * 0.62, 1.82, -21.0), Vector3(0.42, 0.28, 0.48), produce_color)
 
 func _create_roadside_environment() -> void:
