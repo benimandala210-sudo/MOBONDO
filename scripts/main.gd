@@ -200,12 +200,13 @@ func _refresh_mission() -> void:
         mission_manager.get_mission_title(),
         mission_manager.get_objective_text(),
         mission_manager.get_current_objective_id(),
-        0,
-        0
+        mission_manager.get_current_objective_index(),
+        mission_manager.get_current_objective_total()
     )
 
-func _on_mission_updated(title: String, objective: String, objective_id: String, _index: int, _total: int) -> void:
-    mission_label.text = title + "\\n" + objective
+func _on_mission_updated(title: String, objective: String, objective_id: String, index: int, total: int) -> void:
+    var progress := "" if total == 0 else "\nMokano %d/%d" % [index, total]
+    mission_label.text = title + progress + "\n" + objective
     if is_instance_valid(parcel):
         parcel.visible = objective_id == "collect_parcel"
 
