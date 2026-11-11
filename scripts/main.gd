@@ -125,18 +125,115 @@ func _setup_world() -> void:
     _create_menu_taxi()
     _create_pedestrians()
 
-    for i in range(6):
-        var z := -5.0 - float(i) * 10.0
-        _add_box("Maison gauche %d" % i, Vector3(-9, 2, z), Vector3(6, 5, 7), Color(0.72, 0.48, 0.31))
-        _add_box("Maison droite %d" % i, Vector3(9, 2, z - 3), Vector3(6, 5, 7), Color(0.65, 0.68, 0.52))
-
-    for i in range(4):
-        _add_box("Étal marché %d" % i, Vector3(-5 + i * 3.2, 0.9, -21), Vector3(2.5, 1.8, 2), Color(0.62, 0.3, 0.16))
+    _create_mapela_houses()
+    _create_market_detail()
+    _create_roadside_environment()
 
     _add_marker("Objectif marché", market_position + Vector3(0, 0.2, 0), Color(1, 0.78, 0.12))
     parcel = _add_box("Colis", parcel_position, Vector3(0.9, 0.9, 0.9), Color(0.9, 0.62, 0.16))
     parcel.visible = false
 
+
+
+func _create_mapela_houses() -> void:
+    var wall_colors := [
+        Color(0.72, 0.48, 0.31), Color(0.65, 0.68, 0.52),
+        Color(0.76, 0.67, 0.52), Color(0.58, 0.61, 0.58),
+        Color(0.72, 0.58, 0.42), Color(0.62, 0.66, 0.64)
+    ]
+    for i in range(6):
+        var z := -5.0 - float(i) * 10.0
+        _create_kinshasa_house("Parcelle gauche %d" % (i + 1), Vector3(-9.0, 0.0, z), wall_colors[i], true, i)
+        _create_kinshasa_house("Parcelle droite %d" % (i + 1), Vector3(9.0, 0.0, z - 3.0), wall_colors[(i + 2) % wall_colors.size()], false, i + 1)
+
+func _create_kinshasa_house(house_name: String, center: Vector3, wall_color: Color, faces_left: bool, variation: int) -> void:
+    _add_box(house_name, center + Vector3(0, 2.0, 0), Vector3(6.0, 4.0, 7.0), wall_color)
+    var front_x := center.x + (3.04 if faces_left else -3.04)
+    var sign := 1.0 if faces_left else -1.0
+    var door_z := center.z + (0.8 if variation % 2 == 0 else -0.8)
+    _add_visual_box("Porte " + house_name, Vector3(front_x, 1.05, door_z), Vector3(0.12, 2.1, 1.15), Color(0.24, 0.16, 0.11))
+    for offset in [-1.8, 1.8]:
+        _add_visual_box("Fenêtre " + house_name, Vector3(front_x + sign * 0.08, 2.35, center.z + offset), Vector3(0.12, 1.0, 1.25), Color(0.16, 0.24, 0.27))
+        _add_visual_box("Volet " + house_name, Vector3(front_x + sign * 0.16, 2.35, center.z + offset), Vector3(0.08, 1.08, 0.08), Color(0.32, 0.22, 0.15))
+    _add_visual_box("Toit tôle " + house_name, center + Vector3(0, 4.18, 0), Vector3(6.5, 0.28, 7.5), Color(0.31, 0.34, 0.35))
+    for rib in range(9):
+        var rib_z := center.z - 3.35 + float(rib) * 0.82
+        _add_visual_box("Nervure tôle", Vector3(center.x, 4.34, rib_z), Vector3(6.45, 0.035, 0.045), Color(0.48, 0.5, 0.49))
+    _add_visual_box("Auvent " + house_name, Vector3(front_x + sign * 0.35, 3.1, center.z), Vector3(0.9, 0.12, 3.2), Color(0.43, 0.25, 0.13))
+    _add_visual_box("Mur parcelle " + house_name, Vector3(center.x, 0.55, center.z + 4.0), Vector3(6.8, 1.1, 0.22), Color(0.55, 0.52, 0.45))
+    for gate_z in [center.z - 2.0, center.z + 2.0]:
+        _add_visual_box("Poteau parcelle", Vector3(front_x, 0.9, gate_z), Vector3(0.28, 1.8, 0.28), Color(0.42, 0.4, 0.36))
+
+func _create_market_detail() -> void:
+    for i in range(4):
+        var x := -5.0 + float(i) * 3.2
+        _add_box("Étal marché %d" % i, Vector3(x, 0.85, -21.0), Vector3(2.5, 1.7, 1.8), Color(0.56, 0.31, 0.17))
+        var canopy_color := [Color(0.72, 0.18, 0.12), Color(0.88, 0.72, 0.22), Color(0.18, 0.38, 0.28), Color(0.2, 0.32, 0.55)][i]
+        _add_visual_box("Bâche marché %d" % i, Vector3(x, 2.35, -21.0), Vector3(2.9, 0.12, 2.4), canopy_color)
+        for dx in [-1.25, 1.25]:
+            for dz in [-1.0, 1.0]:
+                _add_visual_box("Poteau étal", Vector3(x + dx, 1.55, -21.0 + dz), Vector3(0.09, 1.5, 0.09), Color(0.25, 0.2, 0.15))
+        for item_index in range(3):
+            var produce_color := [Color(0.78, 0.15, 0.1), Color(0.82, 0.52, 0.12), Color(0.25, 0.55, 0.2)][item_index]
+            _add_visual_box("Marchandise", Vector3(x - 0.65 + float(item_index) * 0.62, 1.82, -21.0), Vector3(0.42, 0.28, 0.48), produce_color)
+
+func _create_roadside_environment() -> void:
+    # Accotements en terre et caniveaux latéraux.
+    _add_visual_box("Caniveau gauche", Vector3(-5.15, -0.12, -15.0), Vector3(0.3, 0.18, 80.0), Color(0.25, 0.24, 0.2))
+    _add_visual_box("Caniveau droite", Vector3(5.15, -0.12, -15.0), Vector3(0.3, 0.18, 80.0), Color(0.25, 0.24, 0.2))
+    _add_visual_box("Trottoir terre gauche", Vector3(-6.2, 0.0, -15.0), Vector3(1.8, 0.12, 80.0), Color(0.58, 0.43, 0.29))
+    _add_visual_box("Trottoir terre droite", Vector3(6.2, 0.0, -15.0), Vector3(1.8, 0.12, 80.0), Color(0.58, 0.43, 0.29))
+    # Quelques arbres et touffes de végétation pour casser la répétition.
+    for i in range(7):
+        var z := -3.0 - float(i) * 10.5
+        _create_roadside_tree(Vector3(-13.2, 0.0, z), 1.0 + float(i % 3) * 0.12)
+        if i % 2 == 0:
+            _create_roadside_tree(Vector3(13.0, 0.0, z - 3.0), 0.9)
+    # Panneaux fictifs : espaces de visibilité réservés aux marques du projet.
+    _create_brand_sign("MOBONDO", Vector3(-7.2, 2.7, -12.0), Color(0.12, 0.12, 0.13))
+    _create_brand_sign("KIRADESIGN", Vector3(7.2, 2.7, -30.0), Color(0.12, 0.12, 0.13))
+    _create_brand_sign("KIRATECHNOLOGIE", Vector3(-7.2, 2.7, -48.0), Color(0.12, 0.12, 0.13))
+
+func _create_roadside_tree(origin: Vector3, scale_value: float) -> void:
+    var trunk := MeshInstance3D.new()
+    var trunk_mesh := CylinderMesh.new()
+    trunk_mesh.top_radius = 0.16 * scale_value
+    trunk_mesh.bottom_radius = 0.24 * scale_value
+    trunk_mesh.height = 2.0 * scale_value
+    trunk.mesh = trunk_mesh
+    trunk.position = origin + Vector3(0, scale_value, 0)
+    trunk.material_override = _material(Color(0.3, 0.19, 0.11))
+    add_child(trunk)
+    var crown := MeshInstance3D.new()
+    var crown_mesh := SphereMesh.new()
+    crown_mesh.radius = 1.05 * scale_value
+    crown_mesh.height = 1.8 * scale_value
+    crown.mesh = crown_mesh
+    crown.position = origin + Vector3(0, 2.2 * scale_value, 0)
+    crown.material_override = _material(Color(0.17, 0.38, 0.18))
+    add_child(crown)
+
+func _create_brand_sign(text_value: String, origin: Vector3, background_color: Color) -> void:
+    _add_visual_box("Panneau " + text_value, origin, Vector3(0.16, 1.1, 3.0), background_color)
+    var sign_text := Label3D.new()
+    sign_text.text = text_value
+    sign_text.font_size = 32
+    sign_text.pixel_size = 0.012
+    sign_text.modulate = Color(0.9, 0.68, 0.32)
+    sign_text.position = origin + Vector3(0.1, 0, 0)
+    sign_text.rotation.y = PI / 2.0
+    add_child(sign_text)
+
+func _add_visual_box(box_name: String, pos: Vector3, size: Vector3, color: Color) -> MeshInstance3D:
+    var item := MeshInstance3D.new()
+    item.name = box_name
+    var mesh := BoxMesh.new()
+    mesh.size = size
+    item.mesh = mesh
+    item.position = pos
+    item.material_override = _material(color)
+    add_child(item)
+    return item
 
 func _create_menu_taxi() -> void:
     menu_taxi = Node3D.new()
