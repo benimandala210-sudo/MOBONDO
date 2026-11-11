@@ -23,11 +23,19 @@ var npc_position := Vector3(5, 0, -28)
 var parcel_position := Vector3(-8, 0.5, -30)
 var market_position := Vector3(0, 0, -15)
 var parcel: MeshInstance3D
+var menu_layer: CanvasLayer
+var menu_root: Control
+var main_menu_panel: PanelContainer
+var mode_panel: PanelContainer
+var settings_panel: PanelContainer
+var menu_message: Label
+var selected_mode := "histoire"
 
 func _ready() -> void:
     _setup_world()
     _setup_player()
     _setup_ui()
+    _setup_main_menu()
     mission_manager = MISSION_MANAGER_SCRIPT.new()
     mission_manager.mission_updated.connect(_on_mission_updated)
     mission_manager.mission_completed.connect(_on_mission_completed)
@@ -167,6 +175,211 @@ func _setup_ui() -> void:
     controls.add_child(action_button)
 
     _setup_dialogue_ui(layer)
+
+func _setup_main_menu() -> void:
+    menu_layer = CanvasLayer.new()
+    menu_layer.layer = 20
+    add_child(menu_layer)
+
+    menu_root = Control.new()
+    menu_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    menu_layer.add_child(menu_root)
+
+    var backdrop := ColorRect.new()
+    backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    backdrop.color = Color(0.035, 0.045, 0.055, 0.96)
+    menu_root.add_child(backdrop)
+
+    var glow := ColorRect.new()
+    glow.anchor_left = 0.0
+    glow.anchor_top = 0.0
+    glow.anchor_right = 1.0
+    glow.anchor_bottom = 1.0
+    glow.color = Color(0.34, 0.19, 0.07, 0.16)
+    menu_root.add_child(glow)
+
+    main_menu_panel = _create_menu_panel(menu_root)
+    var main_column := VBoxContainer.new()
+    main_column.add_theme_constant_override("separation", 14)
+    main_menu_panel.add_child(main_column)
+
+    var studio := Label.new()
+    studio.text = "KIRATECHNOLOGIE PRÉSENTE"
+    studio.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    studio.add_theme_font_size_override("font_size", 13)
+    studio.add_theme_color_override("font_color", Color(0.82, 0.61, 0.32))
+    main_column.add_child(studio)
+
+    var title := Label.new()
+    title.text = "MOBONDO"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_font_size_override("font_size", 42)
+    title.add_theme_color_override("font_color", Color(0.94, 0.72, 0.36))
+    main_column.add_child(title)
+
+    var subtitle := Label.new()
+    subtitle.text = "MOKILI MOKO. BOMOI MOKO. LISolo NA YO."
+    subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    subtitle.add_theme_font_size_override("font_size", 12)
+    subtitle.add_theme_color_override("font_color", Color(0.86, 0.82, 0.73))
+    main_column.add_child(subtitle)
+
+    var separator := HSeparator.new()
+    main_column.add_child(separator)
+
+    var play_button := _make_menu_button("BANDÁ KOSALA", true)
+    play_button.pressed.connect(_show_mode_selection)
+    main_column.add_child(play_button)
+
+    var settings_button := _make_menu_button("PARAMÈTRES", false)
+    settings_button.pressed.connect(_show_settings)
+    main_column.add_child(settings_button)
+
+    var footer := Label.new()
+    footer.text = "KINSHASA • MAPELA–RAÏS"
+    footer.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    footer.add_theme_font_size_override("font_size", 11)
+    footer.add_theme_color_override("font_color", Color(0.68, 0.65, 0.58))
+    main_column.add_child(footer)
+
+    mode_panel = _create_menu_panel(menu_root)
+    mode_panel.visible = false
+    var mode_column := VBoxContainer.new()
+    mode_column.add_theme_constant_override("separation", 12)
+    mode_panel.add_child(mode_column)
+
+    var mode_title := Label.new()
+    mode_title.text = "PONA LOLENGE YA KOSakana"
+    mode_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    mode_title.add_theme_font_size_override("font_size", 21)
+    mode_title.add_theme_color_override("font_color", Color(0.94, 0.72, 0.36))
+    mode_column.add_child(mode_title)
+
+    var story_button := _make_menu_button("MODE HISTOIRE", true)
+    story_button.pressed.connect(func(): _start_game("histoire"))
+    mode_column.add_child(story_button)
+
+    var free_button := _make_menu_button("BOMOI YA LIBRE", false)
+    free_button.pressed.connect(func(): _start_game("libre"))
+    mode_column.add_child(free_button)
+
+    var back_mode := _make_menu_button("ZONGA", false)
+    back_mode.pressed.connect(_show_main_menu)
+    mode_column.add_child(back_mode)
+
+    settings_panel = _create_menu_panel(menu_root)
+    settings_panel.visible = false
+    var settings_column := VBoxContainer.new()
+    settings_column.add_theme_constant_override("separation", 12)
+    settings_panel.add_child(settings_column)
+
+    var settings_title := Label.new()
+    settings_title.text = "PARAMÈTRES"
+    settings_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    settings_title.add_theme_font_size_override("font_size", 22)
+    settings_title.add_theme_color_override("font_color", Color(0.94, 0.72, 0.36))
+    settings_column.add_child(settings_title)
+
+    var language_label := Label.new()
+    language_label.text = "MONƆ: LINGALA YA KINSHASA"
+    language_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    language_label.add_theme_color_override("font_color", Color(0.9, 0.87, 0.8))
+    settings_column.add_child(language_label)
+
+    var language_note := Label.new()
+    language_note.text = "Français : option à intégrer dans une prochaine version."
+    language_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    language_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    language_note.add_theme_font_size_override("font_size", 12)
+    language_note.add_theme_color_override("font_color", Color(0.72, 0.7, 0.65))
+    settings_column.add_child(language_note)
+
+    var settings_back := _make_menu_button("ZONGA", false)
+    settings_back.pressed.connect(_show_main_menu)
+    settings_column.add_child(settings_back)
+
+    menu_message = Label.new()
+    menu_message.text = "Version prototype — interface en construction"
+    menu_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    menu_message.add_theme_font_size_override("font_size", 10)
+    menu_message.add_theme_color_override("font_color", Color(0.7, 0.68, 0.62))
+    menu_message.anchor_left = 0.05
+    menu_message.anchor_right = 0.95
+    menu_message.anchor_top = 0.94
+    menu_message.anchor_bottom = 0.99
+    menu_root.add_child(menu_message)
+
+func _create_menu_panel(parent: Control) -> PanelContainer:
+    var panel := PanelContainer.new()
+    panel.anchor_left = 0.5
+    panel.anchor_top = 0.5
+    panel.anchor_right = 0.5
+    panel.anchor_bottom = 0.5
+    panel.offset_left = -190
+    panel.offset_top = -205
+    panel.offset_right = 190
+    panel.offset_bottom = 205
+    panel.add_theme_stylebox_override("panel", _menu_panel_style())
+    parent.add_child(panel)
+    return panel
+
+func _menu_panel_style() -> StyleBoxFlat:
+    var style := StyleBoxFlat.new()
+    style.bg_color = Color(0.07, 0.075, 0.08, 0.96)
+    style.border_color = Color(0.72, 0.48, 0.2, 0.9)
+    style.set_border_width_all(2)
+    style.set_corner_radius_all(14)
+    style.content_margin_left = 24
+    style.content_margin_right = 24
+    style.content_margin_top = 24
+    style.content_margin_bottom = 24
+    return style
+
+func _make_menu_button(caption: String, highlighted: bool) -> Button:
+    var button := Button.new()
+    button.text = caption
+    button.custom_minimum_size = Vector2(0, 52)
+    button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    button.add_theme_font_size_override("font_size", 16)
+    if highlighted:
+        button.add_theme_color_override("font_color", Color(0.08, 0.07, 0.05))
+        button.add_theme_color_override("font_hover_color", Color(0.08, 0.07, 0.05))
+        var normal := StyleBoxFlat.new()
+        normal.bg_color = Color(0.82, 0.57, 0.24)
+        normal.set_corner_radius_all(8)
+        button.add_theme_stylebox_override("normal", normal)
+        var hover := StyleBoxFlat.new()
+        hover.bg_color = Color(0.95, 0.72, 0.36)
+        hover.set_corner_radius_all(8)
+        button.add_theme_stylebox_override("hover", hover)
+    return button
+
+func _show_mode_selection() -> void:
+    main_menu_panel.visible = false
+    mode_panel.visible = true
+    settings_panel.visible = false
+
+func _show_settings() -> void:
+    main_menu_panel.visible = false
+    mode_panel.visible = false
+    settings_panel.visible = true
+
+func _show_main_menu() -> void:
+    main_menu_panel.visible = true
+    mode_panel.visible = false
+    settings_panel.visible = false
+
+func _start_game(mode: String) -> void:
+    selected_mode = mode
+    menu_root.visible = false
+    if mode == "histoire":
+        status_label.text = "MODE HISTOIRE — Tokoba na eteni ya liboso."
+        _refresh_mission()
+    else:
+        status_label.text = "BOMOI YA LIBRE — Ozali na bonsomi ya kotambola."
+    if is_instance_valid(player):
+        player.set_physics_process(true)
 
 func _setup_dialogue_ui(layer: CanvasLayer) -> void:
     dialogue_panel = PanelContainer.new()
