@@ -31,6 +31,11 @@ var mode_panel: PanelContainer
 var settings_panel: PanelContainer
 var menu_message: Label
 var selected_mode := "histoire"
+var menu_active := true
+var menu_taxi: Node3D
+var menu_emblem: Control
+var menu_glow: ColorRect
+var menu_time := 0.0
 
 func _ready() -> void:
     _setup_world()
@@ -51,12 +56,25 @@ func _ready() -> void:
     add_child(dialogue_manager)
     _refresh_mission()
 
-func _process(_delta: float) -> void:
-    if is_instance_valid(player) and is_instance_valid(camera):
-        camera.global_position = player.global_position + Vector3(0, 7, 11)
-        camera.look_at(player.global_position + Vector3(0, 1, 0), Vector3.UP)
-    _update_mobile_direction()
-    _update_status()
+func _process(delta: float) -> void:
+    if is_instance_valid(camera):
+        if menu_active:
+            menu_time += delta
+            camera.global_position = Vector3(sin(menu_time * 0.12) * 0.45, 7.2 + sin(menu_time * 0.22) * 0.12, 16.5)
+            camera.look_at(Vector3(0, 2.0, -15), Vector3.UP)
+            if is_instance_valid(menu_taxi):
+                menu_taxi.position.x = -4.8 + fposmod(menu_time * 1.35, 9.6)
+            if is_instance_valid(menu_emblem):
+                var pulse := 1.0 + sin(menu_time * 1.8) * 0.025
+                menu_emblem.scale = Vector2(pulse, pulse)
+            if is_instance_valid(menu_glow):
+                menu_glow.color.a = 0.12 + (sin(menu_time * 0.7) + 1.0) * 0.025
+        elif is_instance_valid(player):
+            camera.global_position = player.global_position + Vector3(0, 7, 11)
+            camera.look_at(player.global_position + Vector3(0, 1, 0), Vector3.UP)
+    if not menu_active:
+        _update_mobile_direction()
+        _update_status()
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo:
@@ -76,6 +94,7 @@ func _setup_world() -> void:
 
     _add_box("Sol", Vector3(0, -0.55, -15), Vector3(70, 1, 80), Color(0.22, 0.42, 0.24))
     _add_box("Route", Vector3(0, -0.02, -15), Vector3(9, 0.12, 80), Color(0.18, 0.18, 0.2))
+    _create_menu_taxi()
 
     for i in range(6):
         var z := -5.0 - float(i) * 10.0
@@ -90,10 +109,55 @@ func _setup_world() -> void:
     parcel = _add_box("Colis", parcel_position, Vector3(0.9, 0.9, 0.9), Color(0.9, 0.62, 0.16))
     parcel.visible = false
 
+
+func _create_menu_taxi() -> void:
+    menu_taxi = Node3D.new()
+    menu_taxi.name = "Taxi jaune animé"
+    menu_taxi.position = Vector3(-4.8, 0.0, -8.0)
+    add_child(menu_taxi)
+
+    var body := MeshInstance3D.new()
+    var body_mesh := BoxMesh.new()
+    body_mesh.size = Vector3(2.2, 0.72, 3.8)
+    body.mesh = body_mesh
+    body.position.y = 0.72
+    body.material_override = _material(Color(0.93, 0.68, 0.08))
+    menu_taxi.add_child(body)
+
+    var cabin := MeshInstance3D.new()
+    var cabin_mesh := BoxMesh.new()
+    cabin_mesh.size = Vector3(1.72, 0.72, 1.85)
+    cabin.mesh = cabin_mesh
+    cabin.position = Vector3(0, 1.38, -0.12)
+    cabin.material_override = _material(Color(0.16, 0.22, 0.25))
+    menu_taxi.add_child(cabin)
+
+    var roof_sign := MeshInstance3D.new()
+    var sign_mesh := BoxMesh.new()
+    sign_mesh.size = Vector3(0.72, 0.2, 0.34)
+    roof_sign.mesh = sign_mesh
+    roof_sign.position = Vector3(0, 1.86, -0.12)
+    roof_sign.material_override = _material(Color(0.95, 0.9, 0.72))
+    menu_taxi.add_child(roof_sign)
+
+    for x in [-0.92, 0.92]:
+        for z in [-1.25, 1.25]:
+            var wheel := MeshInstance3D.new()
+            var wheel_mesh := CylinderMesh.new()
+            wheel_mesh.top_radius = 0.34
+            wheel_mesh.bottom_radius = 0.34
+            wheel_mesh.height = 0.2
+            wheel.mesh = wheel_mesh
+            wheel.position = Vector3(x, 0.38, z)
+            wheel.rotation.z = PI / 2.0
+            wheel.material_override = _material(Color(0.055, 0.055, 0.06))
+            menu_taxi.add_child(wheel)
+
 func _setup_player() -> void:
     player = CharacterBody3D.new()
     player.name = "Joueur"
     player.position = Vector3(0, 1, 0)
+    player.visible = false
     player.set_script(PLAYER_SCRIPT)
     add_child(player)
 
@@ -188,7 +252,7 @@ func _setup_main_menu() -> void:
 
     var backdrop := ColorRect.new()
     backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-    backdrop.color = Color(0.035, 0.045, 0.055, 0.96)
+    backdrop.color = Color(0.035, 0.045, 0.055, 0.78)
     menu_root.add_child(backdrop)
 
     var glow := ColorRect.new()
@@ -197,6 +261,7 @@ func _setup_main_menu() -> void:
     glow.anchor_right = 1.0
     glow.anchor_bottom = 1.0
     glow.color = Color(0.34, 0.19, 0.07, 0.16)
+    menu_glow = glow
     menu_root.add_child(glow)
 
     main_menu_panel = _create_menu_panel(menu_root)
@@ -214,6 +279,7 @@ func _setup_main_menu() -> void:
     var emblem := Control.new()
     emblem.set_script(MOBONDO_EMBLEM_SCRIPT)
     emblem.custom_minimum_size = Vector2(104, 92)
+    menu_emblem = emblem
     main_column.add_child(emblem)
 
     var title := Label.new()
@@ -378,7 +444,10 @@ func _show_main_menu() -> void:
 
 func _start_game(mode: String) -> void:
     selected_mode = mode
+    menu_active = false
     menu_root.visible = false
+    if is_instance_valid(player):
+        player.visible = true
     if mode == "histoire":
         status_label.text = "MODE HISTOIRE — Tokoba na eteni ya liboso."
         _refresh_mission()
