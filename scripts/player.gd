@@ -9,6 +9,7 @@ extends CharacterBody3D
 
 var mobile_direction: Vector2 = Vector2.ZERO
 var wants_run: bool = false
+var jump_requested: bool = false
 var movement_camera: Camera3D
 var gravity: float = ProjectSettings.get_setting("physics/3d/default_gravity")
 
@@ -73,8 +74,9 @@ func _physics_process(delta: float) -> void:
     if moving:
         rotation.y = lerp_angle(rotation.y, atan2(-move_direction.x, -move_direction.z), minf(delta * 12.0, 1.0))
 
-    if Input.is_action_just_pressed("jump") and is_on_floor():
+    if (Input.is_action_just_pressed("jump") or jump_requested) and is_on_floor():
         velocity.y = jump_velocity
+    jump_requested = false
 
     move_and_slide()
 
@@ -83,6 +85,9 @@ func set_mobile_direction(value: Vector2) -> void:
 
 func set_running(value: bool) -> void:
     wants_run = value
+
+func request_jump() -> void:
+    jump_requested = true
 
 func set_movement_camera(value: Camera3D) -> void:
     movement_camera = value
