@@ -48,6 +48,14 @@ workflows:
           JAVA_HOME="${JAVA_HOME:-/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home}"
           test -d "$ANDROID_SDK"
           test -x "$JAVA_HOME/bin/java"
+          ADB="$ANDROID_SDK/platform-tools/adb"
+          if [ -x "$ADB" ]; then
+            "$ADB" start-server
+            "$ADB" devices
+          else
+            echo "ERROR: adb introuvable dans $ANDROID_SDK/platform-tools"
+            exit 1
+          fi
           mkdir -p "$HOME/Library/Application Support/Godot"
           cat > "$HOME/Library/Application Support/Godot/editor_settings-4.tres" <<EOF
           [gd_resource type="EditorSettings" format=3]
