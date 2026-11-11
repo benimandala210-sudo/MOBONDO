@@ -128,6 +128,7 @@ func _setup_world() -> void:
     _create_mapela_houses()
     _create_market_detail()
     _create_roadside_environment()
+    _create_road_markings_and_lights()
 
     _add_marker("Objectif marché", market_position + Vector3(0, 0.2, 0), Color(1, 0.78, 0.12))
     parcel = _add_box("Colis", parcel_position, Vector3(0.9, 0.9, 0.9), Color(0.9, 0.62, 0.16))
@@ -193,6 +194,47 @@ func _create_roadside_environment() -> void:
     _create_brand_sign("MOBONDO", Vector3(-7.2, 2.7, -12.0), Color(0.12, 0.12, 0.13))
     _create_brand_sign("KIRADESIGN", Vector3(7.2, 2.7, -30.0), Color(0.12, 0.12, 0.13))
     _create_brand_sign("KIRATECHNOLOGIE", Vector3(-7.2, 2.7, -48.0), Color(0.12, 0.12, 0.13))
+
+
+func _create_road_markings_and_lights() -> void:
+    # Marquage discret : route urbaine, pas une autoroute.
+    for i in range(12):
+        var z := -1.5 - float(i) * 6.0
+        _add_visual_box("Trait central route", Vector3(0, 0.055, z), Vector3(0.12, 0.025, 2.2), Color(0.82, 0.72, 0.48))
+    _add_visual_box("Bande bord route gauche", Vector3(-4.25, 0.055, -15.0), Vector3(0.07, 0.025, 80.0), Color(0.55, 0.53, 0.46))
+    _add_visual_box("Bande bord route droite", Vector3(4.25, 0.055, -15.0), Vector3(0.07, 0.025, 80.0), Color(0.55, 0.53, 0.46))
+    # Passage piéton à proximité du marché.
+    for i in range(6):
+        _add_visual_box("Passage piéton", Vector3(-3.6 + float(i) * 1.2, 0.06, -17.0), Vector3(0.72, 0.025, 2.2), Color(0.78, 0.76, 0.68))
+    # Lampadaires simples, utiles pour les scènes nocturnes.
+    _create_street_light(Vector3(-6.9, 0.0, -8.0))
+    _create_street_light(Vector3(6.9, 0.0, -27.0))
+    _create_street_light(Vector3(-6.9, 0.0, -47.0))
+
+func _create_street_light(origin: Vector3) -> void:
+    var pole := MeshInstance3D.new()
+    var pole_mesh := CylinderMesh.new()
+    pole_mesh.top_radius = 0.055
+    pole_mesh.bottom_radius = 0.09
+    pole_mesh.height = 5.2
+    pole.mesh = pole_mesh
+    pole.position = origin + Vector3(0, 2.6, 0)
+    pole.material_override = _material(Color(0.22, 0.23, 0.22))
+    add_child(pole)
+    _add_visual_box("Bras lampadaire", origin + Vector3(0.35, 5.05, 0), Vector3(0.8, 0.08, 0.08), Color(0.22, 0.23, 0.22))
+    var lamp := MeshInstance3D.new()
+    var lamp_mesh := SphereMesh.new()
+    lamp_mesh.radius = 0.16
+    lamp_mesh.height = 0.22
+    lamp.mesh = lamp_mesh
+    lamp.position = origin + Vector3(0.72, 4.98, 0)
+    var lamp_material := StandardMaterial3D.new()
+    lamp_material.albedo_color = Color(1.0, 0.78, 0.42)
+    lamp_material.emission_enabled = true
+    lamp_material.emission = Color(1.0, 0.58, 0.2)
+    lamp_material.emission_energy_multiplier = 0.6
+    lamp.material_override = lamp_material
+    add_child(lamp)
 
 func _create_roadside_tree(origin: Vector3, scale_value: float) -> void:
     var trunk := MeshInstance3D.new()
