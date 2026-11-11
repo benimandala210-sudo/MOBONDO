@@ -457,6 +457,9 @@ func _update_mobile_direction() -> void:
 func _perform_action() -> void:
     if is_instance_valid(dialogue_panel) and dialogue_panel.visible:
         return
+    if selected_mode == "libre":
+        status_label.text = "Mode vie libre : les interactions seront ajoutées progressivement."
+        return
     if not is_instance_valid(mission_manager):
         return
 
