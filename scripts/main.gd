@@ -145,11 +145,11 @@ func _create_mapela_road_network() -> void:
     _create_street_name_marker("AVENUE BILONDA", Vector3(-4.45, 2.1, -8.0))
     # OpenStreetMap indique Frontiere comme connectée à Bilonda et à Rue Imbali.
     # Les tracés ci-dessous sont des approximations de gameplay, pas un relevé cadastral.
-    _add_visual_box("Ruelle Frontiere — tracé provisoire", Vector3(-10.5, 0.015, -31.0), Vector3(13.0, 0.07, 4.2), Color(0.34, 0.31, 0.27))
-    _add_visual_box("Ruelle Imbali — tracé provisoire", Vector3(-16.5, 0.02, -25.5), Vector3(4.2, 0.07, 11.0), Color(0.34, 0.31, 0.27))
-    _create_street_name_marker("FRONTIERE", Vector3(-10.5, 1.65, -33.4))
-    _create_street_name_marker("RUE IMBALI", Vector3(-18.7, 1.65, -25.5))
-    _add_visual_box("Accotement ruelle Frontiere", Vector3(-10.5, 0.02, -33.25), Vector3(13.0, 0.06, 0.22), Color(0.58, 0.43, 0.29))
+    _add_visual_box("Ruelle Frontiere — tracé provisoire", Vector3(-10.5, 0.015, -50.0), Vector3(13.0, 0.07, 3.2), Color(0.34, 0.31, 0.27))
+    _add_visual_box("Ruelle Imbali — tracé provisoire", Vector3(-17.0, 0.02, -44.5), Vector3(3.2, 0.07, 11.0), Color(0.34, 0.31, 0.27))
+    _create_street_name_marker("FRONTIERE", Vector3(-10.5, 1.65, -52.0))
+    _create_street_name_marker("RUE IMBALI", Vector3(-19.0, 1.65, -44.5))
+    _add_visual_box("Accotement ruelle Frontiere", Vector3(-10.5, 0.02, -51.7), Vector3(13.0, 0.06, 0.18), Color(0.58, 0.43, 0.29))
 
 func _create_street_name_marker(street_name: String, origin: Vector3) -> void:
     var post := MeshInstance3D.new()
@@ -190,7 +190,7 @@ func _create_mapela_street_directory() -> void:
     var board_position := Vector3(-5.7, 2.2, -19.0)
     _add_visual_box("Panneau repère Mapela", board_position, Vector3(0.18, 3.8, 4.8), Color(0.16, 0.18, 0.17))
     var directory := Label3D.new()
-    directory.text = "MAPELA — RUES\\nBilonda • Frontiere • Kahumba\\nLufushi • Muteba • Ngufulu\\nNtalu 1 • Ntalu 2 • Fatuma\\nImbali • Inzia • Justice\\nKikwit • Kotoko • Kulu\\nMbula • Milundu • Travail\\nSalongo • Yassa"
+    directory.text = "MAPELA — RUES\nBilonda • Frontiere • Kahumba\nLufushi • Muteba • Ngufulu\nNtalu 1 • Ntalu 2 • Fatuma\nImbali • Inzia • Justice\nKikwit • Kotoko • Kulu\nMbula • Milundu • Travail\nSalongo • Yassa"
     directory.font_size = 25
     directory.pixel_size = 0.009
     directory.modulate = Color(0.95, 0.87, 0.68)
