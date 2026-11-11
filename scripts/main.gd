@@ -136,20 +136,20 @@ func _setup_ui() -> void:
     controls.add_child(spacer)
 
     run_button = Button.new()
-    run_button.text = "COURIR"
+    run_button.text = "KIMA"
     run_button.custom_minimum_size = Vector2(100, 56)
     run_button.button_down.connect(func(): player.set_running(true))
     run_button.button_up.connect(func(): player.set_running(false))
     controls.add_child(run_button)
 
     var jump_button := Button.new()
-    jump_button.text = "SAUTER"
+    jump_button.text = "PUMBWA"
     jump_button.custom_minimum_size = Vector2(90, 56)
     jump_button.pressed.connect(func(): Input.action_press("jump"); Input.action_release("jump"))
     controls.add_child(jump_button)
 
     action_button = Button.new()
-    action_button.text = "ACTION"
+    action_button.text = "SALA"
     action_button.custom_minimum_size = Vector2(100, 56)
     action_button.pressed.connect(_perform_action)
     controls.add_child(action_button)
@@ -179,19 +179,19 @@ func _perform_action() -> void:
             if player.global_position.distance_to(market_position) < 4.0:
                 mission_manager.complete_objective(objective_id)
             else:
-                status_label.text = "Pusana pene ya zando liboso ya kosala ACTION."
+                status_label.text = "Pusana pene ya zando liboso ya kosala SALA."
         "talk_resident":
             if player.global_position.distance_to(npc_position) < 3.5:
                 mission_manager.complete_objective(objective_id)
             else:
-                status_label.text = "Pusana pene ya moto ya quartier liboso ya kosala ACTION."
+                status_label.text = "Pusana pene ya moto ya quartier liboso ya kosala SALA."
         "collect_parcel":
             if player.global_position.distance_to(parcel_position) < 3.5:
                 mission_manager.complete_objective(objective_id)
             else:
-                status_label.text = "Pusana pene ya colis liboso ya kosala ACTION."
+                status_label.text = "Pusana pene ya colis liboso ya kosala SALA."
         _:
-            status_label.text = "Mission oyo ezali naino na préparation."
+            status_label.text = "Mission oyo ebongisami naino te."
 
 func _refresh_mission() -> void:
     if not is_instance_valid(mission_manager):
@@ -224,9 +224,9 @@ func _update_status() -> void:
     if not is_instance_valid(mission_manager):
         return
     if mission_manager.is_current_episode_completed():
-        status_label.text = "Episodi esili. Tokobongisa oyo elandi."
+        status_label.text = "Eteni oyo esili. Tokobongisa oyo elandi."
     elif player.global_position.length() > 0.1:
-        status_label.text = "Landa mokano ya mission mpe finá ACTION pene ya esika oyo esengeli."
+        status_label.text = "Landa mokano ya mission mpe finá SALA pene ya esika oyo esengeli."
 
 func _add_marker(marker_name: String, pos: Vector3, color: Color) -> MeshInstance3D:
     var marker := MeshInstance3D.new()
