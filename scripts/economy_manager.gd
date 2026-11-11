@@ -41,6 +41,10 @@ func sell(item_id: String) -> bool:
     _emit_update("Oteki %s. +%d FC." % [str(item["name"]), int(item["sell"])])
     return true
 
+func reset_daily() -> void:
+    helped_today = false
+    _save_state()
+
 func do_market_job() -> bool:
     if helped_today:
         _emit_update("Osalisi Mama Sifa lelo. Yaka lobi mpo na mosala mosusu.")
