@@ -104,8 +104,8 @@ func get_objective_text() -> String:
     var objective := get_current_objective()
     if objective.is_empty():
         if is_current_episode_completed():
-            return "Episodi esili. Episodi oyo ekolanda ezali naino na préparation."
-        return "Mission oyo ezali naino na préparation."
+            return "Eteni oyo esili. Oyo ekolanda ebongisami naino te."
+        return "Mission oyo ebongisami naino te."
     return str(objective.get("title", "")) + "\n" + str(objective.get("description", ""))
 
 func is_current_episode_completed() -> bool:
@@ -135,7 +135,7 @@ func complete_objective(objective_id: String) -> bool:
                 unlocked_episode_ids.append(next_episode_id)
         _save_progress()
         mission_completed.emit(str(episode.get("title", "Mission")))
-        mission_message.emit("Malamu! Osilisi épisode oyo.")
+        mission_message.emit("Malamu! Osilisi eteni oyo.")
         _emit_current_mission()
         return true
 
@@ -148,7 +148,7 @@ func fail_episode(reason: String) -> void:
         return
     episode_failed = true
     mission_failed.emit(reason)
-    mission_message.emit("Mission elongi te. Tokobanda lisusu épisode oyo.")
+    mission_message.emit("Mission elongi te. Tokobanda lisusu eteni oyo.")
     restart_episode()
 
 func restart_episode() -> void:
@@ -160,7 +160,7 @@ func restart_episode() -> void:
 func _emit_current_mission() -> void:
     var episode := get_current_episode()
     if episode.is_empty():
-        mission_updated.emit("MOBONDO", "Aucune mission disponible.", "", 0, 0)
+        mission_updated.emit("MOBONDO", "Mission ezali te.", "", 0, 0)
         return
     var objectives := _get_required_objectives()
     if objectives.is_empty() or is_current_episode_completed():
