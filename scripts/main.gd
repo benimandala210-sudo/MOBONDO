@@ -3,6 +3,7 @@ extends Node3D
 const PLAYER_SCRIPT = preload("res://scripts/player.gd")
 const MISSION_MANAGER_SCRIPT = preload("res://scripts/mission_manager.gd")
 const DIALOGUE_MANAGER_SCRIPT = preload("res://scripts/dialogue_manager.gd")
+const ECONOMY_MANAGER_SCRIPT = preload("res://scripts/economy_manager.gd")
 const MOBONDO_EMBLEM_SCRIPT = preload("res://scripts/mobondo_emblem.gd")
 const SAVE_PATH := "user://mobondo_save.json"
 
@@ -10,6 +11,12 @@ var player: CharacterBody3D
 var camera: Camera3D
 var mission_manager
 var dialogue_manager
+var economy_manager
+var market_panel: PanelContainer
+var wallet_label: Label
+var market_balance_label: Label
+var market_inventory_label: Label
+var market_message_label: Label
 var game_ui_layer: CanvasLayer
 var dialogue_panel: PanelContainer
 var dialogue_speaker_label: Label
@@ -63,6 +70,9 @@ func _ready() -> void:
     dialogue_manager.dialogue_closed.connect(_on_dialogue_closed)
     dialogue_manager.conversation_finished.connect(_on_conversation_finished)
     add_child(dialogue_manager)
+    economy_manager = ECONOMY_MANAGER_SCRIPT.new()
+    economy_manager.economy_updated.connect(_on_economy_updated)
+    add_child(economy_manager)
     _refresh_mission()
 
 func _process(delta: float) -> void:
@@ -335,6 +345,9 @@ func _setup_ui() -> void:
     world_clock_label.text = "07:00 — Mokolo ya sika"
     world_clock_label.add_theme_color_override("font_color", Color(0.9, 0.72, 0.42))
     column.add_child(world_clock_label)
+    wallet_label = Label.new()
+    wallet_label.text = "Mbongo: 10 000 FC"
+    column.add_child(wallet_label)
 
     var controls := HBoxContainer.new()
     controls.anchor_left = 0.0
@@ -378,6 +391,7 @@ func _setup_ui() -> void:
     controls.add_child(action_button)
 
     _setup_dialogue_ui(layer)
+    _setup_market_ui(layer)
 
 func _setup_main_menu() -> void:
     menu_layer = CanvasLayer.new()
@@ -674,8 +688,105 @@ func _on_dialogue_updated(speaker: String, text: String, choices: Array) -> void
         choice_button.custom_minimum_size = Vector2(0, 44)
         choice_button.pressed.connect(_on_dialogue_choice_pressed.bind(i))
         dialogue_choices.add_child(choice_button)
+    if speaker.begins_with("Mama Sifa") and not dialogue_manager.waiting_for_close:
+        var market_button := Button.new()
+        market_button.text = "Tala mpe somba biloko na zando"
+        market_button.custom_minimum_size = Vector2(0, 44)
+        market_button.pressed.connect(_open_market)
+        dialogue_choices.add_child(market_button)
     if is_instance_valid(player):
         player.set_physics_process(false)
+
+func _setup_market_ui(layer: CanvasLayer) -> void:
+    market_panel = PanelContainer.new()
+    market_panel.anchor_left = 0.08
+    market_panel.anchor_top = 0.14
+    market_panel.anchor_right = 0.92
+    market_panel.anchor_bottom = 0.86
+    market_panel.visible = false
+    layer.add_child(market_panel)
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation", 8)
+    market_panel.add_child(column)
+    var title := Label.new()
+    title.text = "ZANDO YA MAMA SIFA"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_font_size_override("font_size", 22)
+    column.add_child(title)
+    market_balance_label = Label.new()
+    column.add_child(market_balance_label)
+    market_inventory_label = Label.new()
+    market_inventory_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    column.add_child(market_inventory_label)
+    var goods = [["Eau — 1 000 FC", "eau"], ["Pain — 1 500 FC", "pain"], ["Tomates — 2 000 FC", "tomates"]]
+    for good in goods:
+        var row := HBoxContainer.new()
+        column.add_child(row)
+        var buy_button := Button.new()
+        buy_button.text = "Somba " + str(good[0])
+        buy_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+        buy_button.pressed.connect(_buy_market_item.bind(str(good[1])))
+        row.add_child(buy_button)
+        var sell_button := Button.new()
+        sell_button.text = "Teka"
+        sell_button.pressed.connect(_sell_market_item.bind(str(good[1])))
+        row.add_child(sell_button)
+    var job_button := Button.new()
+    job_button.text = "Salisa komema biloko — zwa 4 000 FC"
+    job_button.pressed.connect(_do_market_job)
+    column.add_child(job_button)
+    market_message_label = Label.new()
+    market_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    column.add_child(market_message_label)
+    var close_button := Button.new()
+    close_button.text = "KANGA ZANDO"
+    close_button.pressed.connect(_close_market)
+    column.add_child(close_button)
+
+func _open_market() -> void:
+    if is_instance_valid(dialogue_manager) and not dialogue_manager.active_character_id.is_empty():
+        dialogue_manager.close_dialogue()
+    dialogue_panel.visible = false
+    market_panel.visible = true
+    if is_instance_valid(player):
+        player.set_physics_process(false)
+    _on_economy_updated(economy_manager.get_balance(), economy_manager.inventory, "Tala biloko oyo ezali na zando.")
+
+func _close_market() -> void:
+    market_panel.visible = false
+    if is_instance_valid(player):
+        player.set_physics_process(true)
+
+func _buy_market_item(item_id: String) -> void:
+    economy_manager.buy(item_id)
+
+func _sell_market_item(item_id: String) -> void:
+    economy_manager.sell(item_id)
+
+func _do_market_job() -> void:
+    economy_manager.do_market_job()
+
+func _on_economy_updated(balance: int, inventory: Dictionary, message: String) -> void:
+    if is_instance_valid(wallet_label):
+        wallet_label.text = "Mbongo: %s FC" % _format_fc(balance)
+    if is_instance_valid(market_balance_label):
+        market_balance_label.text = "Portefeuille: %s FC" % _format_fc(balance)
+    if is_instance_valid(market_inventory_label):
+        market_inventory_label.text = "Biloko na yo: Eau %d | Pain %d | Tomates %d" % [int(inventory.get("eau", 0)), int(inventory.get("pain", 0)), int(inventory.get("tomates", 0))]
+    if is_instance_valid(market_message_label):
+        market_message_label.text = message
+
+func _format_fc(amount: int) -> String:
+    var raw := str(amount)
+    var result := ""
+    var count := 0
+    for i in range(raw.length() - 1, -1, -1):
+        result = raw.substr(i, 1) + result
+        count += 1
+        if count == 3 and i > 0:
+            result = " " + result
+            count = 0
+    return result
 
 func _on_dialogue_choice_pressed(index: int) -> void:
     if not is_instance_valid(dialogue_manager):
