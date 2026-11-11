@@ -84,3 +84,23 @@ Dans `scripts/main.gd` :
 
 ---
 Document de travail géographique. Les données ouvertes sont incomplètes et doivent être confrontées à la connaissance du terrain avant toute affirmation de géométrie exacte.
+
+
+## Repères communautaires ajoutés au prototype
+
+Les sources cartographiques ouvertes recensent autour de Mapela plusieurs catégories de services : bureau administratif de quartier sur la rue Mbula, centre de santé et maternité Mapela, écoles et lieux de culte. L'ACP rapporte en avril 2026 que le bureau administratif du quartier fonctionnait encore sous un hangar et que son implantation se trouvait sur l'emprise ferroviaire de l'ONATRA.
+
+Pour éviter de transformer des données incomplètes en fausses certitudes :
+- le bureau du quartier est représenté comme un abri administratif modeste, cohérent avec le reportage ACP ;
+- le centre de santé est représenté sans reprendre un nom commercial ou une identité privée non autorisée ;
+- l'école et la salle de prière sont des bâtiments génériques fictifs, à remplacer ou repositionner après validation locale ;
+- le terrain de football et le point d'eau sont des espaces de vie génériques de quartier, pas des lieux précis certifiés.
+
+Le prototype ne prétend pas que ces six éléments se trouvent à leurs positions actuelles dans le vrai Mapela. Leur implantation dans la scène est un arrangement de gameplay, dans l'attente d'une validation plus précise.
+
+### Sources supplémentaires
+- Mapcarta, bâtiment « Bureau administrative », 105 Rue Mbula, Mapela : https://mapcarta.com/fr/W1376489735
+- Mapcarta, « bureau de l'ecole », 105 Rue Mbula, Mapela : https://mapcarta.com/fr/W1376488662
+- Mapcarta, Centre de Santé Mapela : https://mapcarta.com/fr/N9065941366
+- OpenAlfa, services recensés à Mapela : https://rues-rd-congo.openalfa.com/rues/mapela-masina-kinshasa-republique-democratique-du-congo
+- ACP, conditions du bureau administratif du quartier Mapela, 23 avril 2026 : https://acp.cd/urbain/kinshasa-lacquisition-dun-terrain-sollicitee-pour-construire-le-bureau-dun-quartier-a-masina/
