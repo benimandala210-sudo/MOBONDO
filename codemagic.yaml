@@ -1,0 +1,68 @@
+workflows:
+  mobondo-android-debug:
+    name: MOBONDO - APK Android (debug)
+    max_build_duration: 120
+    instance_type: linux_x2
+
+    environment:
+      vars:
+        GODOT_VERSION: "4.2.2"
+        APK_PATH: "build/MOBONDO-debug.apk"
+
+    scripts:
+      - name: Install Godot 4.2.2 and Android export templates
+        script: |
+          set -euo pipefail
+
+          mkdir -p "$CM_BUILD_DIR/.godot-tools" "$HOME/.local/share/godot/export_templates"
+          cd "$CM_BUILD_DIR/.godot-tools"
+
+          curl -fL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o godot.zip
+          unzip -oq godot.zip -d godot
+          sudo install -m 755 "godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+
+          curl -fL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o export_templates.tpz
+          mkdir -p "/tmp/godot-templates"
+          unzip -oq export_templates.tpz -d /tmp/godot-templates
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          find /tmp/godot-templates -type f \( -name "android_debug.apk" -o -name "android_release.apk" -o -name "android_source.zip" \) -exec cp {} "$TEMPLATE_DIR/" \;
+
+          test -s "$TEMPLATE_DIR/android_debug.apk"
+          test -s "$TEMPLATE_DIR/android_release.apk"
+          godot --version
+
+      - name: Check project and import resources
+        script: |
+          set -euo pipefail
+          test -f project.godot
+          test -f scenes/main.tscn
+          test -f scripts/main.gd
+          test -f scripts/player.gd
+          godot --headless --editor --path "$CM_BUILD_DIR" --quit
+
+      - name: Create temporary Android debug signing key
+        script: |
+          set -euo pipefail
+          keytool -genkeypair -v \
+            -keystore "$CM_BUILD_DIR/mobondo-debug.keystore" \
+            -storepass android \
+            -alias androiddebugkey \
+            -keypass android \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -keyalg RSA -keysize 2048 -validity 10000
+
+      - name: Export MOBONDO APK
+        script: |
+          set -euo pipefail
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PATH="$CM_BUILD_DIR/mobondo-debug.keystore"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
+          export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
+          mkdir -p "$CM_BUILD_DIR/build"
+          godot --headless --path "$CM_BUILD_DIR" --export-debug "Android" "$CM_BUILD_DIR/$APK_PATH"
+          test -s "$CM_BUILD_DIR/$APK_PATH"
+          ls -lh "$CM_BUILD_DIR/$APK_PATH"
+
+    artifacts:
+      - build/*.apk
+      - .godot/imported/**/*.log
