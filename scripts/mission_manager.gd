@@ -52,6 +52,15 @@ func get_current_objective() -> Dictionary:
         return {}
     return objectives[objective_index]
 
+func get_current_objective_index() -> int:
+    var objectives: Array = get_current_episode().get("objectives", [])
+    if objectives.is_empty():
+        return 0
+    return mini(objective_index + 1, objectives.size())
+
+func get_current_objective_total() -> int:
+    return get_current_episode().get("objectives", []).size()
+
 func get_current_objective_id() -> String:
     return str(get_current_objective().get("id", ""))
 
