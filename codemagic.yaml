@@ -68,14 +68,15 @@ workflows:
           echo "ANDROID_SDK_ROOT=$ANDROID_SDK" >> "$CM_ENV"
           echo "JAVA_HOME=$JAVA_HOME" >> "$CM_ENV"
 
-      - name: Check project and import resources
+      - name: Verify MOBONDO project files
         script: |
           set -euo pipefail
           test -f project.godot
           test -f scenes/main.tscn
           test -f scripts/main.gd
           test -f scripts/player.gd
-          "$GODOT_BIN" --headless --editor --path "$CM_BUILD_DIR" --quit
+          "$GODOT_BIN" --version
+          echo "Project files found. Godot validation will run during Android export."
 
       - name: Create temporary Android debug signing key
         script: |
