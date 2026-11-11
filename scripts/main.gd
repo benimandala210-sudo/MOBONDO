@@ -2,11 +2,17 @@ extends Node3D
 
 const PLAYER_SCRIPT = preload("res://scripts/player.gd")
 const MISSION_MANAGER_SCRIPT = preload("res://scripts/mission_manager.gd")
+const DIALOGUE_MANAGER_SCRIPT = preload("res://scripts/dialogue_manager.gd")
 const SAVE_PATH := "user://mobondo_save.json"
 
 var player: CharacterBody3D
 var camera: Camera3D
 var mission_manager: Node
+var dialogue_manager: Node
+var dialogue_panel: PanelContainer
+var dialogue_speaker_label: Label
+var dialogue_text_label: Label
+var dialogue_choices: VBoxContainer
 var mission_label: Label
 var status_label: Label
 var action_button: Button
@@ -28,6 +34,12 @@ func _ready() -> void:
     mission_manager.mission_failed.connect(_on_mission_failed)
     mission_manager.mission_message.connect(_on_mission_message)
     add_child(mission_manager)
+
+    dialogue_manager = DIALOGUE_MANAGER_SCRIPT.new()
+    dialogue_manager.dialogue_updated.connect(_on_dialogue_updated)
+    dialogue_manager.dialogue_closed.connect(_on_dialogue_closed)
+    dialogue_manager.conversation_finished.connect(_on_conversation_finished)
+    add_child(dialogue_manager)
     _refresh_mission()
 
 func _process(_delta: float) -> void:
@@ -154,6 +166,66 @@ func _setup_ui() -> void:
     action_button.pressed.connect(_perform_action)
     controls.add_child(action_button)
 
+    _setup_dialogue_ui(layer)
+
+func _setup_dialogue_ui(layer: CanvasLayer) -> void:
+    dialogue_panel = PanelContainer.new()
+    dialogue_panel.anchor_left = 0.12
+    dialogue_panel.anchor_top = 0.56
+    dialogue_panel.anchor_right = 0.88
+    dialogue_panel.anchor_bottom = 0.94
+    dialogue_panel.offset_left = 0
+    dialogue_panel.offset_top = 0
+    dialogue_panel.offset_right = 0
+    dialogue_panel.offset_bottom = 0
+    dialogue_panel.visible = false
+    layer.add_child(dialogue_panel)
+
+    var dialogue_column := VBoxContainer.new()
+    dialogue_panel.add_child(dialogue_column)
+    dialogue_speaker_label = Label.new()
+    dialogue_speaker_label.add_theme_font_size_override("font_size", 22)
+    dialogue_column.add_child(dialogue_speaker_label)
+    dialogue_text_label = Label.new()
+    dialogue_text_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    dialogue_text_label.custom_minimum_size = Vector2(0, 64)
+    dialogue_column.add_child(dialogue_text_label)
+    dialogue_choices = VBoxContainer.new()
+    dialogue_column.add_child(dialogue_choices)
+
+func _on_dialogue_updated(speaker: String, text: String, choices: Array) -> void:
+    dialogue_panel.visible = true
+    dialogue_speaker_label.text = speaker
+    dialogue_text_label.text = text
+    for child in dialogue_choices.get_children():
+        child.queue_free()
+    for i in range(choices.size()):
+        var choice: Dictionary = choices[i]
+        var choice_button := Button.new()
+        choice_button.text = str(choice.get("text", "Pona"))
+        choice_button.custom_minimum_size = Vector2(0, 44)
+        choice_button.pressed.connect(_on_dialogue_choice_pressed.bind(i))
+        dialogue_choices.add_child(choice_button)
+    if is_instance_valid(player):
+        player.set_physics_process(false)
+
+func _on_dialogue_choice_pressed(index: int) -> void:
+    if not is_instance_valid(dialogue_manager):
+        return
+    if dialogue_manager.waiting_for_close:
+        dialogue_manager.close_dialogue()
+    else:
+        dialogue_manager.choose_option(index)
+
+func _on_dialogue_closed() -> void:
+    dialogue_panel.visible = false
+    if is_instance_valid(player):
+        player.set_physics_process(true)
+
+func _on_conversation_finished(character_id: String, _choice_id: String) -> void:
+    if character_id == "resident_mapela" and mission_manager.get_current_objective_id() == "talk_resident":
+        mission_manager.complete_objective("talk_resident")
+
 func _add_hold_button(parent: HBoxContainer, caption: String, key_name: String) -> void:
     var button := Button.new()
     button.text = caption
@@ -182,7 +254,8 @@ func _perform_action() -> void:
                 status_label.text = "Pusana pene ya zando liboso ya kosala SALA."
         "talk_resident":
             if player.global_position.distance_to(npc_position) < 3.5:
-                mission_manager.complete_objective(objective_id)
+                if not dialogue_manager.start_dialogue("resident_mapela"):
+                    status_label.text = "Okoki kosolola na ye sikoyo te."
             else:
                 status_label.text = "Pusana pene ya moto ya quartier liboso ya kosala SALA."
         "collect_parcel":
