@@ -132,6 +132,7 @@ func _setup_world() -> void:
     _create_market_detail()
     _create_roadside_environment()
     _create_road_markings_and_lights()
+    _create_mapela_landmarks()
 
     _add_marker("Objectif marché", market_position + Vector3(0, 0.2, 0), Color(1, 0.78, 0.12))
     parcel = _add_box("Colis", parcel_position, Vector3(0.9, 0.9, 0.9), Color(0.9, 0.62, 0.16))
@@ -139,6 +140,63 @@ func _setup_world() -> void:
 
 
 
+
+
+func _create_mapela_landmarks() -> void:
+    _create_neighborhood_admin_hut(Vector3(-21.0, 0.0, -12.0))
+    _create_neighborhood_health_post(Vector3(22.0, 0.0, -36.0))
+    _create_neighborhood_school(Vector3(-22.0, 0.0, -43.0))
+    _create_neighborhood_church(Vector3(22.0, 0.0, -8.0))
+    _create_football_space(Vector3(0.0, 0.0, -57.0))
+    _create_water_point(Vector3(5.5, 0.0, -39.0))
+
+func _create_neighborhood_admin_hut(origin: Vector3) -> void:
+    # Représentation volontairement modeste du bureau de quartier décrit comme un hangar.
+    _add_visual_box("Bureau quartier — abri administratif", origin + Vector3(0, 1.35, 0), Vector3(5.0, 2.7, 4.2), Color(0.62, 0.56, 0.43))
+    _add_visual_box("Toit hangar bureau quartier", origin + Vector3(0, 2.82, 0), Vector3(5.5, 0.16, 4.7), Color(0.32, 0.35, 0.35))
+    _add_visual_box("Ouverture bureau quartier", origin + Vector3(2.54, 1.0, 0), Vector3(0.08, 1.8, 1.3), Color(0.16, 0.18, 0.17))
+    _add_visual_box("Comptoir bureau quartier", origin + Vector3(1.6, 0.85, -0.6), Vector3(1.0, 0.12, 1.3), Color(0.34, 0.24, 0.15))
+    _create_street_name_marker("BUREAU DU QUARTIER", origin + Vector3(0, 3.7, -2.6))
+
+func _create_neighborhood_health_post(origin: Vector3) -> void:
+    _add_visual_box("Centre de santé — bâtiment", origin + Vector3(0, 1.8, 0), Vector3(6.2, 3.6, 5.8), Color(0.78, 0.75, 0.65))
+    _add_visual_box("Toit centre de santé", origin + Vector3(0, 3.72, 0), Vector3(6.5, 0.18, 6.1), Color(0.35, 0.38, 0.36))
+    _add_visual_box("Porte centre de santé", origin + Vector3(3.14, 1.0, 0), Vector3(0.1, 2.0, 1.25), Color(0.2, 0.3, 0.34))
+    _add_visual_box("Signe croix centre santé", origin + Vector3(3.25, 2.8, 0), Vector3(0.12, 0.85, 0.85), Color(0.75, 0.12, 0.12))
+    _add_visual_box("Cour centre de santé", origin + Vector3(0, 0.025, 4.5), Vector3(9.0, 0.05, 3.0), Color(0.58, 0.46, 0.32))
+    _create_street_name_marker("CENTRE DE SANTE", origin + Vector3(0, 4.35, -3.2))
+
+func _create_neighborhood_school(origin: Vector3) -> void:
+    _add_visual_box("École du quartier — bâtiment", origin + Vector3(0, 1.7, 0), Vector3(8.0, 3.4, 5.0), Color(0.76, 0.67, 0.48))
+    _add_visual_box("Toit école", origin + Vector3(0, 3.52, 0), Vector3(8.3, 0.18, 5.3), Color(0.34, 0.37, 0.36))
+    for i in range(4):
+        _add_visual_box("Fenêtre école", origin + Vector3(4.06, 2.1, -1.8 + float(i) * 1.2), Vector3(0.1, 0.85, 0.75), Color(0.18, 0.28, 0.32))
+    _add_visual_box("Porte école", origin + Vector3(4.08, 1.0, 0), Vector3(0.12, 2.0, 1.1), Color(0.28, 0.19, 0.12))
+    _add_visual_box("Cour de récréation", origin + Vector3(0, 0.02, 5.0), Vector3(12.0, 0.04, 5.0), Color(0.59, 0.45, 0.29))
+    _create_street_name_marker("ECOLE DU QUARTIER", origin + Vector3(0, 4.1, -2.9))
+
+func _create_neighborhood_church(origin: Vector3) -> void:
+    _add_visual_box("Église de quartier — salle", origin + Vector3(0, 2.0, 0), Vector3(7.0, 4.0, 6.0), Color(0.72, 0.68, 0.56))
+    _add_visual_box("Toit église", origin + Vector3(0, 4.1, 0), Vector3(7.3, 0.18, 6.3), Color(0.3, 0.34, 0.35))
+    _add_visual_box("Entrée église", origin + Vector3(3.56, 1.2, 0), Vector3(0.12, 2.4, 1.6), Color(0.26, 0.18, 0.12))
+    _add_visual_box("Croix église verticale", origin + Vector3(3.8, 5.0, 0), Vector3(0.16, 1.1, 0.16), Color(0.82, 0.72, 0.48))
+    _add_visual_box("Croix église horizontale", origin + Vector3(3.8, 5.12, 0), Vector3(0.16, 0.16, 0.7), Color(0.82, 0.72, 0.48))
+    _create_street_name_marker("SALLE DE PRIERE", origin + Vector3(0, 5.8, -3.0))
+
+func _create_football_space(origin: Vector3) -> void:
+    _add_visual_box("Terrain de football quartier", origin + Vector3(0, 0.02, 0), Vector3(18.0, 0.05, 11.0), Color(0.3, 0.43, 0.22))
+    _add_visual_box("Ligne centrale terrain", origin + Vector3(0, 0.06, 0), Vector3(0.08, 0.02, 10.8), Color(0.83, 0.82, 0.69))
+    _add_visual_box("Ligne but gauche", origin + Vector3(-8.8, 0.06, 0), Vector3(0.08, 0.02, 10.8), Color(0.83, 0.82, 0.69))
+    _add_visual_box("Ligne but droite", origin + Vector3(8.8, 0.06, 0), Vector3(0.08, 0.02, 10.8), Color(0.83, 0.82, 0.69))
+    _add_visual_box("Poteau but 1", origin + Vector3(-8.6, 0.7, -1.2), Vector3(0.12, 1.4, 0.12), Color(0.82, 0.8, 0.7))
+    _add_visual_box("Poteau but 2", origin + Vector3(-8.6, 0.7, 1.2), Vector3(0.12, 1.4, 0.12), Color(0.82, 0.8, 0.7))
+    _add_visual_box("Barre but", origin + Vector3(-8.6, 1.38, 0), Vector3(0.12, 0.12, 2.4), Color(0.82, 0.8, 0.7))
+
+func _create_water_point(origin: Vector3) -> void:
+    _add_visual_box("Socle point d'eau", origin + Vector3(0, 0.35, 0), Vector3(1.5, 0.7, 1.2), Color(0.45, 0.43, 0.37))
+    _add_visual_box("Cuve point d'eau", origin + Vector3(0, 1.55, 0), Vector3(1.1, 1.7, 1.0), Color(0.26, 0.42, 0.55))
+    _add_visual_box("Robinet point d'eau", origin + Vector3(0.72, 1.0, 0.2), Vector3(0.55, 0.12, 0.12), Color(0.62, 0.65, 0.64))
+    _create_street_name_marker("POINT D'EAU", origin + Vector3(0, 2.8, -0.9))
 
 func _create_mapela_road_network() -> void:
     # Bilonda est documentée comme axe important de Mapela.
