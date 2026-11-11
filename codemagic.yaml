@@ -92,8 +92,31 @@ workflows:
           "$GODOT_BIN" --version
           mkdir -p "$CM_BUILD_DIR/build"
           echo "Project files found."
+          set +e
           "$GODOT_BIN" --headless --editor --path "$CM_BUILD_DIR" --quit --verbose 2>&1 | tee "$CM_BUILD_DIR/build/godot-editor-validation.log"
+          EDITOR_STATUS=${PIPESTATUS[0]}
+          set -e
+          if grep -E "SCRIPT ERROR:|Parse Error:|ERROR: Failed to load script" "$CM_BUILD_DIR/build/godot-editor-validation.log"; then
+            echo "ERROR: Godot editor validation found a script error."
+            exit 1
+          fi
+          if [ "$EDITOR_STATUS" -ne 0 ]; then
+            echo "WARNING: Godot editor returned $EDITOR_STATUS without a script/parse error; continuing to runtime smoke test."
+          fi
+
+          set +e
           "$GODOT_BIN" --headless --path "$CM_BUILD_DIR" --quit-after 3 --verbose 2>&1 | tee "$CM_BUILD_DIR/build/godot-runtime-smoke-test.log"
+          RUNTIME_STATUS=${PIPESTATUS[0]}
+          set -e
+          if grep -E "SCRIPT ERROR:|Parse Error:|ERROR: Failed to load script" "$CM_BUILD_DIR/build/godot-runtime-smoke-test.log"; then
+            echo "ERROR: Godot runtime smoke test found a script error."
+            exit 1
+          fi
+          if [ "$RUNTIME_STATUS" -ne 0 ]; then
+            echo "ERROR: Godot runtime smoke test exited with status $RUNTIME_STATUS."
+            exit "$RUNTIME_STATUS"
+          fi
+          echo "Godot editor validation and runtime smoke test completed."
 
       - name: Create temporary Android debug signing key
         script: |
