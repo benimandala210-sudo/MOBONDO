@@ -7,8 +7,8 @@ const SAVE_PATH := "user://mobondo_save.json"
 
 var player: CharacterBody3D
 var camera: Camera3D
-var mission_manager: Node
-var dialogue_manager: Node
+var mission_manager
+var dialogue_manager
 var dialogue_panel: PanelContainer
 var dialogue_speaker_label: Label
 var dialogue_text_label: Label
