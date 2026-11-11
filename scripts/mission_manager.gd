@@ -59,7 +59,7 @@ func get_mission_title() -> String:
     var episode := get_current_episode()
     if episode.is_empty():
         return "MOBONDO"
-    return "SAISON 1 · " + str(episode.get("title", "Mission"))
+    return "MOBONDO · Eteni ya 1 · " + str(episode.get("title", "Mission"))
 
 func get_objective_text() -> String:
     var objective := get_current_objective()
