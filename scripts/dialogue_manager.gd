@@ -11,26 +11,26 @@ const SAVE_PATH := "user://mobondo_dialogues.json"
 const CONVERSATIONS := {
     "resident_mapela": {
         "speaker": "Mado",
-        "opening": "Mbote, moninga! Oyebi quartier oyo malamu?",
+        "opening": "Mbote, ndeko! Oyebi quartier oyo malamu to ozali naino mopaya?",
         "choices": [
             {
                 "id": "ask_neighborhood",
-                "text": "Nalingi koyeba quartier.",
-                "reply": "Malamu. Oyo ezali Mapela. Soki ozali na posa ya koyeba bisika, tuna bato na limemya. Bato mingi bakoki kosalisa yo.",
+                "text": "Nalingi koyeba quartier malamu.",
+                "reply": "Ah, ozali malamu! Oyo nde Mapela. Soki olingi koyeba ba coins ya quartier, tuna ba ndeko. Bato ya awa bakoki ko lakisa yo.",
                 "affinity": 2,
                 "flag": "knows_mapela"
             },
             {
                 "id": "ask_work",
-                "text": "Oyebi mosala moko ya kosala?",
-                "reply": "Nayoki ete bato bazali koluka moto ya kosalisa na zando. Kende kotala kuna, mpe solola na bateki.",
+                "text": "Yango, oyebi mwa plan ya mosala?",
+                "reply": "Nayoki na zando bazali na besoin ya mutu ya kosalisa. Kende ko check kuna, solola na ba vendeurs. Peut-être okokuta mwa chance.",
                 "affinity": 1,
                 "flag": "heard_market_work"
             },
             {
                 "id": "greet_only",
-                "text": "Nayei kaka kopesa mbote.",
-                "reply": "Matondo, moninga. Mbote na yo epesi ngai esengo. Tokomonana lisusu!",
+                "text": "Nayei kaka ko pesa mbote, ndeko.",
+                "reply": "Merci mingi, ndeko! Mbote ezali kitoko. Tokomonana lisusu, tika te!",
                 "affinity": 1,
                 "flag": "greeted_mado"
             }
