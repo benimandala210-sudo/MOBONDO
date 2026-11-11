@@ -92,8 +92,10 @@ func _process(delta: float) -> void:
                 glow_color.a = 0.12 + (sin(menu_time * 0.7) + 1.0) * 0.025
                 menu_glow.color = glow_color
         elif is_instance_valid(player) and not transition_active:
-            camera.global_position = player.global_position + Vector3(0, 7, 11)
-            camera.look_at(player.global_position + Vector3(0, 1, 0), Vector3.UP)
+            var camera_target := player.global_position + Vector3(0, 5.6, 9.0)
+            camera.global_position = camera.global_position.lerp(camera_target, minf(delta * 5.5, 1.0))
+            var look_target := player.global_position + Vector3(0, 1.15, 0)
+            camera.look_at(look_target, Vector3.UP)
     if not menu_active:
         _update_mobile_direction()
         _update_status()
@@ -704,7 +706,9 @@ func _setup_player() -> void:
 
     camera = Camera3D.new()
     camera.current = true
+    camera.position = Vector3(0, 5.6, 9.0)
     add_child(camera)
+    player.set_movement_camera(camera)
 
 func _setup_ui() -> void:
     var layer := CanvasLayer.new()
