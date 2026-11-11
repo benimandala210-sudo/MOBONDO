@@ -121,7 +121,10 @@ func _setup_world() -> void:
     add_child(sunlight)
 
     _add_box("Sol", Vector3(0, -0.55, -15), Vector3(70, 1, 80), Color(0.22, 0.42, 0.24))
-    _add_box("Route", Vector3(0, -0.02, -15), Vector3(9, 0.12, 80), Color(0.18, 0.18, 0.2))
+    _add_box("Avenue Bilonda — axe principal provisoire", Vector3(0, -0.02, -15), Vector3(9, 0.12, 80), Color(0.18, 0.18, 0.2))
+    _create_mapela_road_network()
+    _create_rais_railway_remains()
+    _create_mapela_street_directory()
     _create_menu_taxi()
     _create_pedestrians()
 
@@ -135,6 +138,65 @@ func _setup_world() -> void:
     parcel.visible = false
 
 
+
+
+func _create_mapela_road_network() -> void:
+    # Bilonda est documentée comme axe important de Mapela.
+    _create_street_name_marker("AVENUE BILONDA", Vector3(-4.45, 2.1, -8.0))
+    # OpenStreetMap indique Frontiere comme connectée à Bilonda et à Rue Imbali.
+    # Les tracés ci-dessous sont des approximations de gameplay, pas un relevé cadastral.
+    _add_visual_box("Ruelle Frontiere — tracé provisoire", Vector3(-10.5, 0.015, -31.0), Vector3(13.0, 0.07, 4.2), Color(0.34, 0.31, 0.27))
+    _add_visual_box("Ruelle Imbali — tracé provisoire", Vector3(-16.5, 0.02, -25.5), Vector3(4.2, 0.07, 11.0), Color(0.34, 0.31, 0.27))
+    _create_street_name_marker("FRONTIERE", Vector3(-10.5, 1.65, -33.4))
+    _create_street_name_marker("RUE IMBALI", Vector3(-18.7, 1.65, -25.5))
+    _add_visual_box("Accotement ruelle Frontiere", Vector3(-10.5, 0.02, -33.25), Vector3(13.0, 0.06, 0.22), Color(0.58, 0.43, 0.29))
+
+func _create_street_name_marker(street_name: String, origin: Vector3) -> void:
+    var post := MeshInstance3D.new()
+    var post_mesh := CylinderMesh.new()
+    post_mesh.top_radius = 0.045
+    post_mesh.bottom_radius = 0.07
+    post_mesh.height = 1.7
+    post.mesh = post_mesh
+    post.position = origin + Vector3(0, -0.8, 0)
+    post.material_override = _material(Color(0.2, 0.21, 0.2))
+    add_child(post)
+    _add_visual_box("Plaque " + street_name, origin, Vector3(0.12, 0.52, 2.3), Color(0.1, 0.28, 0.2))
+    var label := Label3D.new()
+    label.text = street_name
+    label.font_size = 28
+    label.pixel_size = 0.012
+    label.modulate = Color(0.96, 0.9, 0.72)
+    label.position = origin + Vector3(0.08, 0, 0)
+    label.rotation.y = PI / 2.0
+    add_child(label)
+
+func _create_rais_railway_remains() -> void:
+    # Repère visuel de Raïs : morceaux de fer et traverses discontinus.
+    # Aucun train ni circulation ferroviaire n'est représenté dans cette zone.
+    var rail_x := 19.0
+    for i in range(13):
+        var z := -3.0 - float(i) * 5.7
+        var sleeper := _add_visual_box("Traverse ancienne Raïs", Vector3(rail_x, 0.02, z), Vector3(2.2, 0.12, 0.42), Color(0.24, 0.2, 0.16))
+        sleeper.rotation.y = 0.0
+        if i % 3 != 1:
+            _add_visual_box("Morceau de fer ancien Raïs", Vector3(rail_x - 0.55, 0.11, z + 0.1), Vector3(0.09, 0.12, 1.8), Color(0.28, 0.3, 0.29))
+        if i % 4 == 0:
+            _add_visual_box("Fer rouillé Raïs", Vector3(rail_x + 0.58, 0.13, z - 0.35), Vector3(0.12, 0.1, 0.95), Color(0.42, 0.22, 0.12))
+    _create_street_name_marker("RAÏS — ANCIENNES TRACES", Vector3(19.0, 1.8, -2.2))
+
+func _create_mapela_street_directory() -> void:
+    # Les noms sont conservés sans inventer la position des rues non cartographiées.
+    var board_position := Vector3(-5.7, 2.2, -19.0)
+    _add_visual_box("Panneau repère Mapela", board_position, Vector3(0.18, 3.8, 4.8), Color(0.16, 0.18, 0.17))
+    var directory := Label3D.new()
+    directory.text = "MAPELA — RUES\\nBilonda • Frontiere • Kahumba\\nLufushi • Muteba • Ngufulu\\nNtalu 1 • Ntalu 2 • Fatuma\\nImbali • Inzia • Justice\\nKikwit • Kotoko • Kulu\\nMbula • Milundu • Travail\\nSalongo • Yassa"
+    directory.font_size = 25
+    directory.pixel_size = 0.009
+    directory.modulate = Color(0.95, 0.87, 0.68)
+    directory.position = board_position + Vector3(0.11, 0, 0)
+    directory.rotation.y = PI / 2.0
+    add_child(directory)
 
 func _create_mapela_houses() -> void:
     var wall_colors := [
