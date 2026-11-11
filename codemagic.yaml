@@ -2,7 +2,9 @@ workflows:
   mobondo-android-debug:
     name: MOBONDO - APK Android (debug)
     max_build_duration: 120
-    instance_type: linux_x2
+    # Free individual Codemagic plans include macOS M2 minutes.
+    # Linux X2 requires billing to be enabled.
+    instance_type: mac_mini_m2
 
     environment:
       vars:
@@ -14,23 +16,49 @@ workflows:
         script: |
           set -euo pipefail
 
-          mkdir -p "$CM_BUILD_DIR/.godot-tools" "$HOME/.local/share/godot/export_templates"
-          cd "$CM_BUILD_DIR/.godot-tools"
+          TOOLS_DIR="$CM_BUILD_DIR/.godot-tools"
+          TEMPLATE_ROOT="$HOME/Library/Application Support/Godot/export_templates"
+          TEMPLATE_DIR="$TEMPLATE_ROOT/${GODOT_VERSION}.stable"
+          mkdir -p "$TOOLS_DIR" "$TEMPLATE_DIR"
+          cd "$TOOLS_DIR"
 
-          curl -fL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip" -o godot.zip
+          curl -fL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_macos.universal.zip" -o godot.zip
           unzip -oq godot.zip -d godot
-          sudo install -m 755 "godot/Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          GODOT_BIN="$TOOLS_DIR/godot/Godot.app/Contents/MacOS/Godot"
+          if [ ! -x "$GODOT_BIN" ]; then
+            GODOT_BIN="$(find "$TOOLS_DIR/godot" -type f -name Godot -perm -111 | head -n 1)"
+          fi
+          test -x "$GODOT_BIN"
+          "$GODOT_BIN" --version
 
           curl -fL "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -o export_templates.tpz
-          mkdir -p "/tmp/godot-templates"
-          unzip -oq export_templates.tpz -d /tmp/godot-templates
-          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
-          mkdir -p "$TEMPLATE_DIR"
-          find /tmp/godot-templates -type f \( -name "android_debug.apk" -o -name "android_release.apk" -o -name "android_source.zip" \) -exec cp {} "$TEMPLATE_DIR/" \;
-
+          mkdir -p "$TOOLS_DIR/templates"
+          unzip -oq export_templates.tpz -d "$TOOLS_DIR/templates"
+          find "$TOOLS_DIR/templates" -type f \( -name "android_debug.apk" -o -name "android_release.apk" -o -name "android_source.zip" \) -exec cp {} "$TEMPLATE_DIR/" \;
           test -s "$TEMPLATE_DIR/android_debug.apk"
           test -s "$TEMPLATE_DIR/android_release.apk"
-          godot --version
+
+          echo "GODOT_BIN=$GODOT_BIN" >> "$CM_ENV"
+          echo "GODOT_BIN=$GODOT_BIN"
+
+      - name: Configure Android SDK and Java for Godot
+        script: |
+          set -euo pipefail
+          ANDROID_SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/share/android-sdk}}"
+          JAVA_HOME="${JAVA_HOME:-/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home}"
+          test -d "$ANDROID_SDK"
+          test -x "$JAVA_HOME/bin/java"
+          mkdir -p "$HOME/Library/Application Support/Godot"
+          cat > "$HOME/Library/Application Support/Godot/editor_settings-4.tres" <<EOF
+          [gd_resource type="EditorSettings" format=3]
+
+          [resource]
+          export/android/android_sdk_path = "$ANDROID_SDK"
+          export/android/java_sdk_path = "$JAVA_HOME"
+          EOF
+          echo "ANDROID_HOME=$ANDROID_SDK" >> "$CM_ENV"
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK" >> "$CM_ENV"
+          echo "JAVA_HOME=$JAVA_HOME" >> "$CM_ENV"
 
       - name: Check project and import resources
         script: |
@@ -39,7 +67,7 @@ workflows:
           test -f scenes/main.tscn
           test -f scripts/main.gd
           test -f scripts/player.gd
-          godot --headless --editor --path "$CM_BUILD_DIR" --quit
+          "$GODOT_BIN" --headless --editor --path "$CM_BUILD_DIR" --quit
 
       - name: Create temporary Android debug signing key
         script: |
@@ -59,7 +87,7 @@ workflows:
           export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
           export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
           mkdir -p "$CM_BUILD_DIR/build"
-          godot --headless --path "$CM_BUILD_DIR" --export-debug "Android" "$CM_BUILD_DIR/$APK_PATH"
+          "$GODOT_BIN" --headless --path "$CM_BUILD_DIR" --export-debug "Android" "$CM_BUILD_DIR/$APK_PATH"
           test -s "$CM_BUILD_DIR/$APK_PATH"
           ls -lh "$CM_BUILD_DIR/$APK_PATH"
 
