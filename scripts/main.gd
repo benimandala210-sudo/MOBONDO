@@ -68,7 +68,9 @@ func _process(delta: float) -> void:
                 var pulse := 1.0 + sin(menu_time * 1.8) * 0.025
                 menu_emblem.scale = Vector2(pulse, pulse)
             if is_instance_valid(menu_glow):
-                menu_glow.color.a = 0.12 + (sin(menu_time * 0.7) + 1.0) * 0.025
+                var glow_color := menu_glow.color
+                glow_color.a = 0.12 + (sin(menu_time * 0.7) + 1.0) * 0.025
+                menu_glow.color = glow_color
         elif is_instance_valid(player):
             camera.global_position = player.global_position + Vector3(0, 7, 11)
             camera.look_at(player.global_position + Vector3(0, 1, 0), Vector3.UP)
@@ -91,6 +93,13 @@ func _setup_world() -> void:
     env.ambient_light_energy = 0.8
     environment.environment = env
     add_child(environment)
+
+    var sunlight := DirectionalLight3D.new()
+    sunlight.rotation_degrees = Vector3(-38, -28, 0)
+    sunlight.light_color = Color(1.0, 0.78, 0.55)
+    sunlight.light_energy = 1.15
+    sunlight.shadow_enabled = false
+    add_child(sunlight)
 
     _add_box("Sol", Vector3(0, -0.55, -15), Vector3(70, 1, 80), Color(0.22, 0.42, 0.24))
     _add_box("Route", Vector3(0, -0.02, -15), Vector3(9, 0.12, 80), Color(0.18, 0.18, 0.2))
@@ -159,6 +168,7 @@ func _setup_player() -> void:
     player.position = Vector3(0, 1, 0)
     player.visible = false
     player.set_script(PLAYER_SCRIPT)
+    player.set_physics_process(false)
     add_child(player)
 
     var body := MeshInstance3D.new()
@@ -448,6 +458,7 @@ func _start_game(mode: String) -> void:
     menu_root.visible = false
     if is_instance_valid(player):
         player.visible = true
+        player.set_physics_process(true)
     if mode == "histoire":
         status_label.text = "MODE HISTOIRE — Tokoba na eteni ya liboso."
         _refresh_mission()
