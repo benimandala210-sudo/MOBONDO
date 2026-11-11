@@ -34,6 +34,8 @@ const EPISODES := [
 var current_episode_index: int = 0
 var objective_index: int = 0
 var completed_episode_ids: Array[String] = []
+var unlocked_episode_ids: Array[String] = ["S1E01"]
+var completed_optional_objective_ids: Array[String] = []
 var episode_failed: bool = false
 
 func _ready() -> void:
@@ -45,21 +47,49 @@ func get_current_episode() -> Dictionary:
         return {}
     return EPISODES[current_episode_index]
 
+func _get_required_objectives() -> Array:
+    var required: Array = []
+    for objective in get_current_episode().get("objectives", []):
+        if not bool(objective.get("optional", false)):
+            required.append(objective)
+    return required
+
+func get_optional_objectives() -> Array:
+    var remaining: Array = []
+    for objective in get_current_episode().get("objectives", []):
+        var objective_id := str(objective.get("id", ""))
+        if bool(objective.get("optional", false)) and not completed_optional_objective_ids.has(objective_id):
+            remaining.append(objective)
+    return remaining
+
+func complete_optional_objective(objective_id: String) -> bool:
+    for objective in get_current_episode().get("objectives", []):
+        if str(objective.get("id", "")) == objective_id and bool(objective.get("optional", false)):
+            if completed_optional_objective_ids.has(objective_id):
+                return false
+            completed_optional_objective_ids.append(objective_id)
+            _save_progress()
+            mission_message.emit("Malamu! Osilisi mokano ya kobakisa.")
+            return true
+    return false
+
+func is_episode_unlocked(episode_id: String) -> bool:
+    return unlocked_episode_ids.has(episode_id)
+
 func get_current_objective() -> Dictionary:
-    var episode := get_current_episode()
-    var objectives: Array = episode.get("objectives", [])
+    var objectives := _get_required_objectives()
     if objective_index < 0 or objective_index >= objectives.size():
         return {}
     return objectives[objective_index]
 
 func get_current_objective_index() -> int:
-    var objectives: Array = get_current_episode().get("objectives", [])
+    var objectives := _get_required_objectives()
     if objectives.is_empty():
         return 0
     return mini(objective_index + 1, objectives.size())
 
 func get_current_objective_total() -> int:
-    return get_current_episode().get("objectives", []).size()
+    return _get_required_objectives().size()
 
 func get_current_objective_id() -> String:
     return str(get_current_objective().get("id", ""))
@@ -68,7 +98,7 @@ func get_mission_title() -> String:
     var episode := get_current_episode()
     if episode.is_empty():
         return "MOBONDO"
-    return "MOBONDO · Eteni ya 1 · " + str(episode.get("title", "Mission"))
+    return "MOBONDO · Eteni ya %d · %s" % [current_episode_index + 1, str(episode.get("title", "Mission"))]
 
 func get_objective_text() -> String:
     var objective := get_current_objective()
@@ -94,11 +124,15 @@ func complete_objective(objective_id: String) -> bool:
 
     objective_index += 1
     var episode := get_current_episode()
-    var objectives: Array = episode.get("objectives", [])
+    var objectives := _get_required_objectives()
     if objective_index >= objectives.size():
         var episode_id := str(episode.get("id", ""))
         if not completed_episode_ids.has(episode_id):
             completed_episode_ids.append(episode_id)
+        if current_episode_index + 1 < EPISODES.size():
+            var next_episode_id := str(EPISODES[current_episode_index + 1].get("id", ""))
+            if not unlocked_episode_ids.has(next_episode_id):
+                unlocked_episode_ids.append(next_episode_id)
         _save_progress()
         mission_completed.emit(str(episode.get("title", "Mission")))
         mission_message.emit("Malamu! Osilisi épisode oyo.")
@@ -128,7 +162,7 @@ func _emit_current_mission() -> void:
     if episode.is_empty():
         mission_updated.emit("MOBONDO", "Aucune mission disponible.", "", 0, 0)
         return
-    var objectives: Array = episode.get("objectives", [])
+    var objectives := _get_required_objectives()
     if objectives.is_empty() or is_current_episode_completed():
         mission_updated.emit(get_mission_title(), get_objective_text(), "", 0, objectives.size())
         return
@@ -145,7 +179,9 @@ func _save_progress() -> void:
     var data := {
         "current_episode_index": current_episode_index,
         "objective_index": objective_index,
-        "completed_episode_ids": completed_episode_ids
+        "completed_episode_ids": completed_episode_ids,
+        "unlocked_episode_ids": unlocked_episode_ids,
+        "completed_optional_objective_ids": completed_optional_objective_ids
     }
     var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
     if file != null:
@@ -171,5 +207,21 @@ func _load_progress() -> void:
             if typeof(episode_id) == TYPE_STRING and not completed_episode_ids.has(episode_id):
                 completed_episode_ids.append(episode_id)
 
-    var objectives: Array = EPISODES[current_episode_index].get("objectives", [])
+    var raw_unlocked = parsed.get("unlocked_episode_ids", ["S1E01"])
+    unlocked_episode_ids.clear()
+    if raw_unlocked is Array:
+        for episode_id in raw_unlocked:
+            if typeof(episode_id) == TYPE_STRING and not unlocked_episode_ids.has(episode_id):
+                unlocked_episode_ids.append(episode_id)
+    var raw_optional = parsed.get("completed_optional_objective_ids", [])
+    completed_optional_objective_ids.clear()
+    if raw_optional is Array:
+        for objective_id in raw_optional:
+            if typeof(objective_id) == TYPE_STRING and not completed_optional_objective_ids.has(objective_id):
+                completed_optional_objective_ids.append(objective_id)
+
+    var objectives: Array = []
+    for objective in EPISODES[current_episode_index].get("objectives", []):
+        if not bool(objective.get("optional", false)):
+            objectives.append(objective)
     objective_index = clampi(int(parsed.get("objective_index", 0)), 0, objectives.size())
