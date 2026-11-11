@@ -48,6 +48,7 @@ var transition_active := false
 var pedestrian_nodes: Array[Node3D] = []
 var pedestrian_origins: Array[Vector3] = []
 var pedestrian_speeds: Array[float] = []
+var street_moto: Node3D
 var world_minutes := 7.0 * 60.0
 var routine_refresh_timer := 0.0
 var sunlight: DirectionalLight3D
@@ -453,6 +454,67 @@ func _create_pedestrians() -> void:
     var customer := _create_pedestrian("Junior", Vector3(3.8, 0.0, -22.5), Color(0.18, 0.38, 0.62), false, 0.0)
     customer.set_meta("character_id", "customer_market")
     customer.set_meta("role", "customer")
+    # Vie quotidienne : enfants près du terrain et habitants devant les parcelles.
+    var child_one := _create_pedestrian("Enfant joueur 1", Vector3(-3.2, 0.0, -56.0), Color(0.82, 0.48, 0.12), true, 1.05)
+    child_one.set_meta("role", "child")
+    var child_two := _create_pedestrian("Enfant joueur 2", Vector3(3.0, 0.0, -58.0), Color(0.22, 0.42, 0.72), true, 0.92)
+    child_two.set_meta("role", "child")
+    var resident_one := _create_pedestrian("Habitant devant parcelle", Vector3(-7.2, 0.0, -7.0), Color(0.38, 0.28, 0.2), false, 0.0)
+    resident_one.set_meta("role", "resident")
+    var resident_two := _create_pedestrian("Habitante près maison", Vector3(7.1, 0.0, -37.0), Color(0.48, 0.2, 0.32), false, 0.0)
+    resident_two.set_meta("role", "resident")
+    _create_street_motos()
+
+func _create_street_motos() -> void:
+    street_moto = Node3D.new()
+    street_moto.name = "Moto taxi de quartier"
+    street_moto.position = Vector3(2.6, 0.0, -2.0)
+    add_child(street_moto)
+
+    var frame := MeshInstance3D.new()
+    var frame_mesh := BoxMesh.new()
+    frame_mesh.size = Vector3(0.34, 0.28, 1.35)
+    frame.mesh = frame_mesh
+    frame.position = Vector3(0, 0.78, 0)
+    frame.material_override = _material(Color(0.16, 0.19, 0.2))
+    street_moto.add_child(frame)
+
+    var seat := MeshInstance3D.new()
+    var seat_mesh := BoxMesh.new()
+    seat_mesh.size = Vector3(0.48, 0.16, 0.58)
+    seat.mesh = seat_mesh
+    seat.position = Vector3(0, 1.02, 0.08)
+    seat.material_override = _material(Color(0.12, 0.1, 0.09))
+    street_moto.add_child(seat)
+
+    for wheel_z in [-0.62, 0.62]:
+        var wheel := MeshInstance3D.new()
+        var wheel_mesh := CylinderMesh.new()
+        wheel_mesh.top_radius = 0.34
+        wheel_mesh.bottom_radius = 0.34
+        wheel_mesh.height = 0.14
+        wheel.mesh = wheel_mesh
+        wheel.position = Vector3(0, 0.36, wheel_z)
+        wheel.rotation.z = PI / 2.0
+        wheel.material_override = _material(Color(0.045, 0.045, 0.05))
+        street_moto.add_child(wheel)
+
+    var handle := MeshInstance3D.new()
+    var handle_mesh := BoxMesh.new()
+    handle_mesh.size = Vector3(0.85, 0.08, 0.08)
+    handle.mesh = handle_mesh
+    handle.position = Vector3(0, 1.18, -0.58)
+    handle.material_override = _material(Color(0.32, 0.32, 0.3))
+    street_moto.add_child(handle)
+
+    var headlight := MeshInstance3D.new()
+    var light_mesh := SphereMesh.new()
+    light_mesh.radius = 0.13
+    light_mesh.height = 0.18
+    headlight.mesh = light_mesh
+    headlight.position = Vector3(0, 0.92, -0.72)
+    headlight.material_override = _material(Color(0.95, 0.82, 0.48))
+    street_moto.add_child(headlight)
 
 func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color, walks: bool, speed: float) -> Node3D:
     var person := Node3D.new()
@@ -501,6 +563,9 @@ func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color
 func _animate_street_life() -> void:
     if is_instance_valid(menu_taxi):
         menu_taxi.position.x = -4.8 + fposmod(menu_time * 1.35, 9.6)
+    if is_instance_valid(street_moto):
+        street_moto.position.z = -2.0 - fposmod(menu_time * 3.2, 68.0)
+        street_moto.rotation.y = PI
     for i in range(pedestrian_nodes.size()):
         var person := pedestrian_nodes[i]
         if not is_instance_valid(person):
