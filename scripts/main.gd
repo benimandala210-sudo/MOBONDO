@@ -26,6 +26,7 @@ func _ready() -> void:
     mission_manager.mission_updated.connect(_on_mission_updated)
     mission_manager.mission_completed.connect(_on_mission_completed)
     mission_manager.mission_failed.connect(_on_mission_failed)
+    mission_manager.mission_message.connect(_on_mission_message)
     add_child(mission_manager)
     _refresh_mission()
 
@@ -214,6 +215,9 @@ func _on_mission_completed(episode_title: String) -> void:
 
 func _on_mission_failed(reason: String) -> void:
     status_label.text = "Mission elongi te: " + reason
+
+func _on_mission_message(message: String) -> void:
+    status_label.text = message
 
 func _update_status() -> void:
     if not is_instance_valid(mission_manager):
