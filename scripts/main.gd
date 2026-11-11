@@ -41,6 +41,10 @@ var transition_active := false
 var pedestrian_nodes: Array[Node3D] = []
 var pedestrian_origins: Array[Vector3] = []
 var pedestrian_speeds: Array[float] = []
+var world_minutes := 7.0 * 60.0
+var routine_refresh_timer := 0.0
+var sunlight: DirectionalLight3D
+var world_clock_label: Label
 
 func _ready() -> void:
     _setup_world()
@@ -64,6 +68,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
     menu_time += delta
     _animate_street_life()
+    _update_world_clock(delta)
     if is_instance_valid(camera):
         if menu_active:
             camera.global_position = Vector3(sin(menu_time * 0.12) * 0.45, 7.2 + sin(menu_time * 0.22) * 0.12, 16.5)
@@ -98,7 +103,7 @@ func _setup_world() -> void:
     environment.environment = env
     add_child(environment)
 
-    var sunlight := DirectionalLight3D.new()
+    sunlight = DirectionalLight3D.new()
     sunlight.rotation_degrees = Vector3(-38, -28, 0)
     sunlight.light_color = Color(1.0, 0.78, 0.55)
     sunlight.light_energy = 1.15
@@ -175,8 +180,10 @@ func _create_pedestrians() -> void:
     _create_pedestrian("Passant 3", Vector3(-3.8, 0.0, -34.0), Color(0.55, 0.34, 0.16), true, 0.66)
     var seller := _create_pedestrian("Mama Sifa", Vector3(-4.8, 0.0, -21.0), Color(0.55, 0.18, 0.16), false, 0.0)
     seller.set_meta("character_id", "seller_market")
+    seller.set_meta("role", "seller")
     var customer := _create_pedestrian("Junior", Vector3(3.8, 0.0, -22.5), Color(0.18, 0.38, 0.62), false, 0.0)
     customer.set_meta("character_id", "customer_market")
+    customer.set_meta("role", "customer")
 
 func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color, walks: bool, speed: float) -> Node3D:
     var person := Node3D.new()
@@ -214,6 +221,8 @@ func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color
         person.add_child(leg)
 
     person.set_meta("walks", walks)
+    person.set_meta("role", "passer" if person_name.begins_with("Passant") else "resident")
+    person.set_meta("active_walks", walks)
     person.set_meta("phase", float(pedestrian_nodes.size()) * 1.7)
     pedestrian_nodes.append(person)
     pedestrian_origins.append(origin)
@@ -236,6 +245,44 @@ func _animate_street_life() -> void:
             person.rotation.y = 0.0 if cos(menu_time * speed + phase) >= 0.0 else PI
         else:
             person.position.y = abs(sin(menu_time * 1.8)) * 0.018
+
+
+func _update_world_clock(delta: float) -> void:
+    # Une seconde réelle représente une minute dans le monde du jeu.
+    world_minutes = fposmod(world_minutes + delta, 1440.0)
+    var hour := int(world_minutes / 60.0)
+    var minute := int(fposmod(world_minutes, 60.0))
+    var period := "Butu" if hour < 6 or hour >= 19 else ("Mpokwa" if hour < 12 else ("Nsima ya midi" if hour < 15 else "Mpokwa ya sima"))
+    if is_instance_valid(world_clock_label):
+        world_clock_label.text = "%02d:%02d — %s" % [hour, minute, period]
+
+    routine_refresh_timer += delta
+    if routine_refresh_timer >= 2.0:
+        routine_refresh_timer = 0.0
+        _apply_npc_routines(hour)
+
+    if is_instance_valid(sunlight):
+        var daylight := clampf((sin((world_minutes / 1440.0) * TAU - PI / 2.0) + 0.18) * 1.35, 0.12, 1.0)
+        sunlight.light_energy = 0.22 + daylight * 0.95
+        sunlight.rotation_degrees.x = -10.0 - daylight * 48.0
+        sunlight.light_color = Color(1.0, 0.66 + daylight * 0.18, 0.42 + daylight * 0.18)
+
+func _apply_npc_routines(hour: int) -> void:
+    for person in pedestrian_nodes:
+        if not is_instance_valid(person):
+            continue
+        var role := str(person.get_meta("role", "resident"))
+        match role:
+            "seller":
+                person.visible = hour >= 6 and hour < 19
+            "customer":
+                person.visible = hour >= 7 and hour < 18
+            "passer":
+                person.visible = hour >= 6 and hour < 22
+            _:
+                person.visible = true
+        if role == "passer":
+            person.set_meta("walks", hour >= 6 and hour < 22)
 
 func _setup_player() -> void:
     player = CharacterBody3D.new()
@@ -284,6 +331,10 @@ func _setup_ui() -> void:
     column.add_child(mission_label)
     status_label = Label.new()
     column.add_child(status_label)
+    world_clock_label = Label.new()
+    world_clock_label.text = "07:00 — Mokolo ya sika"
+    world_clock_label.add_theme_color_override("font_color", Color(0.9, 0.72, 0.42))
+    column.add_child(world_clock_label)
 
     var controls := HBoxContainer.new()
     controls.anchor_left = 0.0
