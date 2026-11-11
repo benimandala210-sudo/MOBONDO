@@ -1,11 +1,12 @@
 extends Node3D
 
 const PLAYER_SCRIPT = preload("res://scripts/player.gd")
+const MISSION_MANAGER_SCRIPT = preload("res://scripts/mission_manager.gd")
 const SAVE_PATH := "user://mobondo_save.json"
 
 var player: CharacterBody3D
 var camera: Camera3D
-var mission_stage: int = 0
+var mission_manager: Node
 var mission_label: Label
 var status_label: Label
 var action_button: Button
@@ -21,7 +22,11 @@ func _ready() -> void:
     _setup_world()
     _setup_player()
     _setup_ui()
-    _load_progress()
+    mission_manager = MISSION_MANAGER_SCRIPT.new()
+    mission_manager.mission_updated.connect(_on_mission_updated)
+    mission_manager.mission_completed.connect(_on_mission_completed)
+    mission_manager.mission_failed.connect(_on_mission_failed)
+    add_child(mission_manager)
     _refresh_mission()
 
 func _process(_delta: float) -> void:
@@ -164,55 +169,59 @@ func _update_mobile_direction() -> void:
     player.set_mobile_direction(Vector2(x, y))
 
 func _perform_action() -> void:
-    if mission_stage == 0 and player.global_position.distance_to(market_position) < 4.0:
-        mission_stage = 1
-        _save_progress()
-        _refresh_mission()
-    elif mission_stage == 1 and player.global_position.distance_to(npc_position) < 3.5:
-        mission_stage = 2
-        parcel.visible = true
-        _save_progress()
-        _refresh_mission()
-    elif mission_stage == 2 and player.global_position.distance_to(parcel_position) < 3.5:
-        mission_stage = 3
-        parcel.visible = false
-        _save_progress()
-        _refresh_mission()
-    else:
-        status_label.text = "Approche-toi de l'objectif avant ACTION."
+    if not is_instance_valid(mission_manager):
+        return
+
+    var objective_id: String = mission_manager.get_current_objective_id()
+    match objective_id:
+        "reach_market":
+            if player.global_position.distance_to(market_position) < 4.0:
+                mission_manager.complete_objective(objective_id)
+            else:
+                status_label.text = "Pusana pene ya zando liboso ya kosala ACTION."
+        "talk_resident":
+            if player.global_position.distance_to(npc_position) < 3.5:
+                mission_manager.complete_objective(objective_id)
+            else:
+                status_label.text = "Pusana pene ya moto ya quartier liboso ya kosala ACTION."
+        "collect_parcel":
+            if player.global_position.distance_to(parcel_position) < 3.5:
+                mission_manager.complete_objective(objective_id)
+            else:
+                status_label.text = "Pusana pene ya colis liboso ya kosala ACTION."
+        _:
+            status_label.text = "Mission oyo ezali naino na préparation."
 
 func _refresh_mission() -> void:
-    match mission_stage:
-        0: mission_label.text = "MISSION 1 : Rejoins le marché."
-        1: mission_label.text = "MISSION 2 : Parle à l'habitant."
-        2: mission_label.text = "MISSION 3 : Récupère le colis."
-        _: mission_label.text = "MISSION TERMINÉE ! Bienvenue dans MOBONDO."
-    if mission_stage >= 1:
-        _add_marker("Habitant", npc_position + Vector3(0, 1, 0), Color(0.2, 0.75, 1))
-    if mission_stage >= 2 and is_instance_valid(parcel):
-        parcel.visible = true
+    if not is_instance_valid(mission_manager):
+        return
+    _on_mission_updated(
+        mission_manager.get_mission_title(),
+        mission_manager.get_objective_text(),
+        mission_manager.get_current_objective_id(),
+        0,
+        0
+    )
+
+func _on_mission_updated(title: String, objective: String, objective_id: String, _index: int, _total: int) -> void:
+    mission_label.text = title + "\\n" + objective
+    if is_instance_valid(parcel):
+        parcel.visible = objective_id == "collect_parcel"
+
+func _on_mission_completed(episode_title: String) -> void:
+    status_label.text = "Malamu! Osilisi: " + episode_title
+    _refresh_mission()
+
+func _on_mission_failed(reason: String) -> void:
+    status_label.text = "Mission elongi te: " + reason
 
 func _update_status() -> void:
-    if mission_stage >= 3:
-        status_label.text = "Progression sauvegardée."
-    elif player.global_position.length() > 0.1:
-        status_label.text = "Explore le quartier et utilise ACTION près des personnages."
-
-func _save_progress() -> void:
-    var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
-    if file:
-        file.store_string(JSON.stringify({"mission_stage": mission_stage}))
-        file.close()
-
-func _load_progress() -> void:
-    if not FileAccess.file_exists(SAVE_PATH):
+    if not is_instance_valid(mission_manager):
         return
-    var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
-    if file:
-        var parsed = JSON.parse_string(file.get_as_text())
-        file.close()
-        if typeof(parsed) == TYPE_DICTIONARY:
-            mission_stage = clampi(int(parsed.get("mission_stage", 0)), 0, 3)
+    if mission_manager.is_current_episode_completed():
+        status_label.text = "Episodi esili. Tokobongisa oyo elandi."
+    elif player.global_position.length() > 0.1:
+        status_label.text = "Landa mokano ya mission mpe finá ACTION pene ya esika oyo esengeli."
 
 func _add_marker(marker_name: String, pos: Vector3, color: Color) -> MeshInstance3D:
     var marker := MeshInstance3D.new()
