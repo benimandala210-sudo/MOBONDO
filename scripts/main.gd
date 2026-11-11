@@ -102,7 +102,7 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo:
-        if event.keycode == KEY_E or event.keycode == KEY_SPACE:
+        if event.keycode == KEY_E:
             _perform_action()
 
 func _setup_world() -> void:
@@ -767,7 +767,7 @@ func _setup_ui() -> void:
     var jump_button := Button.new()
     jump_button.text = "PUMBWA"
     jump_button.custom_minimum_size = Vector2(90, 56)
-    jump_button.pressed.connect(func(): Input.action_press("jump"); Input.action_release("jump"))
+    jump_button.pressed.connect(player.request_jump)
     controls.add_child(jump_button)
 
     action_button = Button.new()
