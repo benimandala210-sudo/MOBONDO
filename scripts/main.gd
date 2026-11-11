@@ -259,7 +259,10 @@ func _animate_street_life() -> void:
 
 func _update_world_clock(delta: float) -> void:
     # Une seconde réelle représente une minute dans le monde du jeu.
+    var previous_minutes := world_minutes
     world_minutes = fposmod(world_minutes + delta, 1440.0)
+    if world_minutes < previous_minutes and is_instance_valid(economy_manager):
+        economy_manager.reset_daily()
     var hour := int(world_minutes / 60.0)
     var minute := int(fposmod(world_minutes, 60.0))
     var period := "Butu" if hour < 6 or hour >= 19 else ("Mpokwa" if hour < 12 else ("Nsima ya midi" if hour < 15 else "Mpokwa ya sima"))
