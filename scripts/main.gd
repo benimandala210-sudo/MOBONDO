@@ -172,8 +172,12 @@ func _create_pedestrians() -> void:
     _create_pedestrian("Passant 1", Vector3(-4.2, 0.0, -12.0), Color(0.18, 0.38, 0.62), true, 0.72)
     _create_pedestrian("Passant 2", Vector3(4.2, 0.0, -23.0), Color(0.22, 0.48, 0.3), true, 0.58)
     _create_pedestrian("Passant 3", Vector3(-3.8, 0.0, -34.0), Color(0.55, 0.34, 0.16), true, 0.66)
+    var seller := _create_pedestrian("Mama Sifa", Vector3(-4.8, 0.0, -21.0), Color(0.55, 0.18, 0.16), false, 0.0)
+    seller.set_meta("character_id", "seller_market")
+    var customer := _create_pedestrian("Junior", Vector3(3.8, 0.0, -22.5), Color(0.18, 0.38, 0.62), false, 0.0)
+    customer.set_meta("character_id", "customer_market")
 
-func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color, walks: bool, speed: float) -> void:
+func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color, walks: bool, speed: float) -> Node3D:
     var person := Node3D.new()
     person.name = person_name
     person.position = origin
@@ -213,6 +217,7 @@ func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color
     pedestrian_nodes.append(person)
     pedestrian_origins.append(origin)
     pedestrian_speeds.append(speed)
+    return person
 
 func _animate_street_life() -> void:
     if is_instance_valid(menu_taxi):
@@ -655,8 +660,10 @@ func _update_mobile_direction() -> void:
 func _perform_action() -> void:
     if is_instance_valid(dialogue_panel) and dialogue_panel.visible:
         return
+    if _try_talk_to_nearby_npc():
+        return
     if selected_mode == "libre":
-        status_label.text = "Mode vie libre : les interactions seront ajoutées progressivement."
+        status_label.text = "Ozali na bomoi ya bonsomi. Pusana pene ya moto mpo na kosolola."
         return
     if not is_instance_valid(mission_manager):
         return
@@ -681,6 +688,20 @@ func _perform_action() -> void:
                 status_label.text = "Pusana pene ya colis liboso ya kosala SALA."
         _:
             status_label.text = "Mission oyo ebongisami naino te."
+
+func _try_talk_to_nearby_npc() -> bool:
+    var closest_id := ""
+    var closest_distance := 3.6
+    for person in pedestrian_nodes:
+        if not is_instance_valid(person) or not person.has_meta("character_id"):
+            continue
+        var distance := player.global_position.distance_to(person.global_position)
+        if distance < closest_distance:
+            closest_distance = distance
+            closest_id = str(person.get_meta("character_id"))
+    if closest_id.is_empty():
+        return false
+    return dialogue_manager.start_dialogue(closest_id)
 
 func _refresh_mission() -> void:
     if not is_instance_valid(mission_manager):
