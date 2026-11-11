@@ -92,32 +92,56 @@ workflows:
           "$GODOT_BIN" --version
           mkdir -p "$CM_BUILD_DIR/build"
           echo "Project files found."
+
+          # Godot headless uses the Dummy renderer. In Godot 4.2.x it can
+          # print mesh_get_surface_count null-RID errors at shutdown even
+          # when MeshInstance3D resources are valid (upstream issue #86806).
+          # Keep script/parse failures fatal, but do not mistake that known
+          # Dummy-renderer shutdown noise for a broken game scene.
           set +e
           "$GODOT_BIN" --headless --editor --path "$CM_BUILD_DIR" --quit --verbose 2>&1 | tee "$CM_BUILD_DIR/build/godot-editor-validation.log"
           EDITOR_STATUS=${PIPESTATUS[0]}
           set -e
+
           if grep -E "SCRIPT ERROR:|Parse Error:|ERROR: Failed to load script" "$CM_BUILD_DIR/build/godot-editor-validation.log"; then
-            echo "ERROR: Godot editor validation found a script error."
+            echo "ERROR: Godot editor validation found a script/parse error."
             exit 1
           fi
+
+          if grep -E "^ERROR:" "$CM_BUILD_DIR/build/godot-editor-validation.log" | grep -v 'Parameter "m" is null\.'; then
+            echo "ERROR: Godot editor validation found an unexpected engine error."
+            exit 1
+          fi
+
           if [ "$EDITOR_STATUS" -ne 0 ]; then
-            echo "WARNING: Godot editor returned $EDITOR_STATUS without a script/parse error; continuing to runtime smoke test."
+            echo "WARNING: Godot editor returned $EDITOR_STATUS; reviewing known headless shutdown messages."
           fi
 
           set +e
           "$GODOT_BIN" --headless --path "$CM_BUILD_DIR" --quit-after 3 --verbose 2>&1 | tee "$CM_BUILD_DIR/build/godot-runtime-smoke-test.log"
           RUNTIME_STATUS=${PIPESTATUS[0]}
           set -e
+
           if grep -E "SCRIPT ERROR:|Parse Error:|ERROR: Failed to load script" "$CM_BUILD_DIR/build/godot-runtime-smoke-test.log"; then
-            echo "ERROR: Godot runtime smoke test found a script error."
+            echo "ERROR: Godot runtime smoke test found a script/parse error."
             exit 1
           fi
-          if [ "$RUNTIME_STATUS" -ne 0 ]; then
-            echo "ERROR: Godot runtime smoke test exited with status $RUNTIME_STATUS."
-            exit "$RUNTIME_STATUS"
-          fi
-          echo "Godot editor validation and runtime smoke test completed."
 
+          if grep -E "^ERROR:" "$CM_BUILD_DIR/build/godot-runtime-smoke-test.log" | grep -v 'Parameter "m" is null\.'; then
+            echo "ERROR: Godot runtime smoke test found an unexpected engine error."
+            exit 1
+          fi
+
+          if [ "$RUNTIME_STATUS" -ne 0 ]; then
+            if grep -q 'Parameter "m" is null\.' "$CM_BUILD_DIR/build/godot-runtime-smoke-test.log"; then
+              echo "WARNING: Godot exited $RUNTIME_STATUS after the known Dummy-renderer mesh shutdown message; script/parse checks passed."
+            else
+              echo "ERROR: Godot runtime smoke test exited with status $RUNTIME_STATUS."
+              exit "$RUNTIME_STATUS"
+            fi
+          fi
+
+          echo "Godot headless script validation and runtime smoke test completed."
       - name: Create temporary Android debug signing key
         script: |
           set -euo pipefail
