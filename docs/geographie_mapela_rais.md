@@ -104,3 +104,16 @@ Le prototype ne prétend pas que ces six éléments se trouvent à leurs positio
 - Mapcarta, Centre de Santé Mapela : https://mapcarta.com/fr/N9065941366
 - OpenAlfa, services recensés à Mapela : https://rues-rd-congo.openalfa.com/rues/mapela-masina-kinshasa-republique-democratique-du-congo
 - ACP, conditions du bureau administratif du quartier Mapela, 23 avril 2026 : https://acp.cd/urbain/kinshasa-lacquisition-dun-terrain-sollicitee-pour-construire-le-bureau-dun-quartier-a-masina/
+
+## Repères Masina signalés par le concepteur local
+
+Les éléments suivants sont ajoutés à la conception à partir des indications d'un connaisseur de Masina et de Mapela :
+
+- **Marché Pascal** : grand marché de référence dans le secteur. Le concepteur signale une forte vigilance à avoir face aux vols à la tire et aux pickpockets. Dans le jeu, cela devient une ambiance de marché dense et une mécanique de prudence pour le joueur ; le jeu ne qualifiera pas indistinctement les vendeurs ou les habitants de voleurs.
+- **Bars et terrasses** : plusieurs rues de Masina comportent des bars et des terrasses en bordure de rue. Le décor intégrera des établissements fictifs, des tables, des chaises, des auvents et une fréquentation variable selon l'heure. Les noms de commerces privés réels ne seront utilisés qu'avec autorisation ou partenariat.
+- **Maison communale de Masina** : repère public indiqué à l'entrée BKTF, sur l'accès qui mène vers Mapela. Son nom public peut être conservé dans le jeu.
+
+### Précision cartographique
+
+Ces trois indications sont des repères locaux utiles à la conception. Leur positionnement exact, les distances, les limites et l'orientation par rapport aux rues ne sont pas encore relevés sur un plan vérifié. Les emplacements actuellement construits dans la scène 3D sont donc des placements provisoires de gameplay, et non des coordonnées géographiques certifiées. L'accès BKTF doit être traité comme l'entrée de Mapela dans la représentation, sans inventer de carrefours ou d'itinéraires secondaires.
+
