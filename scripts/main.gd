@@ -168,7 +168,8 @@ func _create_menu_taxi() -> void:
 
 
 func _create_pedestrians() -> void:
-    _create_pedestrian("Mado", npc_position, Color(0.48, 0.2, 0.12), false, 0.0)
+    var mado := _create_pedestrian("Mado", npc_position, Color(0.48, 0.2, 0.12), false, 0.0)
+    mado.set_meta("character_id", "resident_mapela")
     _create_pedestrian("Passant 1", Vector3(-4.2, 0.0, -12.0), Color(0.18, 0.38, 0.62), true, 0.72)
     _create_pedestrian("Passant 2", Vector3(4.2, 0.0, -23.0), Color(0.22, 0.48, 0.3), true, 0.58)
     _create_pedestrian("Passant 3", Vector3(-3.8, 0.0, -34.0), Color(0.55, 0.34, 0.16), true, 0.66)
