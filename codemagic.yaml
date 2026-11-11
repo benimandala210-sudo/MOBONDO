@@ -48,6 +48,13 @@ workflows:
           JAVA_HOME="${JAVA_HOME:-/Library/Java/JavaVirtualMachines/zulu-17.jdk/Contents/Home}"
           test -d "$ANDROID_SDK"
           test -x "$JAVA_HOME/bin/java"
+          SDKMANAGER="$(find "$ANDROID_SDK" -type f -name sdkmanager | head -n 1)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "ERROR: sdkmanager introuvable dans le Android SDK: $ANDROID_SDK"
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --sdk_root="$ANDROID_SDK" --licenses || true
+          "$SDKMANAGER" --sdk_root="$ANDROID_SDK" "platform-tools" "platforms;android-33" "build-tools;28.0.0" "build-tools;30.0.3" "build-tools;33.0.2" "build-tools;34.0.0"
           ADB="$ANDROID_SDK/platform-tools/adb"
           if [ -x "$ADB" ]; then
             "$ADB" start-server
@@ -96,7 +103,7 @@ workflows:
           export GODOT_ANDROID_KEYSTORE_DEBUG_USER="androiddebugkey"
           export GODOT_ANDROID_KEYSTORE_DEBUG_PASSWORD="android"
           mkdir -p "$CM_BUILD_DIR/build"
-          "$GODOT_BIN" --headless --path "$CM_BUILD_DIR" --export-debug "Android" "$CM_BUILD_DIR/$APK_PATH"
+          "$GODOT_BIN" --headless --verbose --path "$CM_BUILD_DIR" --export-debug "Android" "$CM_BUILD_DIR/$APK_PATH"
           test -s "$CM_BUILD_DIR/$APK_PATH"
           ls -lh "$CM_BUILD_DIR/$APK_PATH"
 
