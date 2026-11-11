@@ -38,6 +38,9 @@ var menu_emblem: Control
 var menu_glow: ColorRect
 var menu_time := 0.0
 var transition_active := false
+var pedestrian_nodes: Array[Node3D] = []
+var pedestrian_origins: Array[Vector3] = []
+var pedestrian_speeds: Array[float] = []
 
 func _ready() -> void:
     _setup_world()
@@ -59,13 +62,12 @@ func _ready() -> void:
     _refresh_mission()
 
 func _process(delta: float) -> void:
+    menu_time += delta
+    _animate_street_life()
     if is_instance_valid(camera):
         if menu_active:
-            menu_time += delta
             camera.global_position = Vector3(sin(menu_time * 0.12) * 0.45, 7.2 + sin(menu_time * 0.22) * 0.12, 16.5)
             camera.look_at(Vector3(0, 2.0, -15), Vector3.UP)
-            if is_instance_valid(menu_taxi):
-                menu_taxi.position.x = -4.8 + fposmod(menu_time * 1.35, 9.6)
             if is_instance_valid(menu_emblem):
                 var pulse := 1.0 + sin(menu_time * 1.8) * 0.025
                 menu_emblem.scale = Vector2(pulse, pulse)
@@ -106,6 +108,7 @@ func _setup_world() -> void:
     _add_box("Sol", Vector3(0, -0.55, -15), Vector3(70, 1, 80), Color(0.22, 0.42, 0.24))
     _add_box("Route", Vector3(0, -0.02, -15), Vector3(9, 0.12, 80), Color(0.18, 0.18, 0.2))
     _create_menu_taxi()
+    _create_pedestrians()
 
     for i in range(6):
         var z := -5.0 - float(i) * 10.0
@@ -116,7 +119,6 @@ func _setup_world() -> void:
         _add_box("Étal marché %d" % i, Vector3(-5 + i * 3.2, 0.9, -21), Vector3(2.5, 1.8, 2), Color(0.62, 0.3, 0.16))
 
     _add_marker("Objectif marché", market_position + Vector3(0, 0.2, 0), Color(1, 0.78, 0.12))
-    _add_marker("Habitant", npc_position + Vector3(0, 1, 0), Color(0.2, 0.75, 1))
     parcel = _add_box("Colis", parcel_position, Vector3(0.9, 0.9, 0.9), Color(0.9, 0.62, 0.16))
     parcel.visible = false
 
@@ -163,6 +165,71 @@ func _create_menu_taxi() -> void:
             wheel.rotation.z = PI / 2.0
             wheel.material_override = _material(Color(0.055, 0.055, 0.06))
             menu_taxi.add_child(wheel)
+
+
+func _create_pedestrians() -> void:
+    _create_pedestrian("Mado", npc_position, Color(0.48, 0.2, 0.12), false, 0.0)
+    _create_pedestrian("Passant 1", Vector3(-4.2, 0.0, -12.0), Color(0.18, 0.38, 0.62), true, 0.72)
+    _create_pedestrian("Passant 2", Vector3(4.2, 0.0, -23.0), Color(0.22, 0.48, 0.3), true, 0.58)
+    _create_pedestrian("Passant 3", Vector3(-3.8, 0.0, -34.0), Color(0.55, 0.34, 0.16), true, 0.66)
+
+func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color, walks: bool, speed: float) -> void:
+    var person := Node3D.new()
+    person.name = person_name
+    person.position = origin
+    add_child(person)
+
+    var torso := MeshInstance3D.new()
+    var torso_mesh := CapsuleMesh.new()
+    torso_mesh.radius = 0.28
+    torso_mesh.height = 0.95
+    torso.mesh = torso_mesh
+    torso.position.y = 1.0
+    torso.material_override = _material(shirt_color)
+    person.add_child(torso)
+
+    var head := MeshInstance3D.new()
+    var head_mesh := SphereMesh.new()
+    head_mesh.radius = 0.2
+    head_mesh.height = 0.4
+    head.mesh = head_mesh
+    head.position.y = 1.65
+    head.material_override = _material(Color(0.32, 0.19, 0.12))
+    person.add_child(head)
+
+    var leg_material := _material(Color(0.12, 0.12, 0.14))
+    for side in [-1.0, 1.0]:
+        var leg := MeshInstance3D.new()
+        var leg_mesh := CapsuleMesh.new()
+        leg_mesh.radius = 0.105
+        leg_mesh.height = 0.62
+        leg.mesh = leg_mesh
+        leg.position = Vector3(side * 0.13, 0.38, 0)
+        leg.material_override = leg_material
+        person.add_child(leg)
+
+    person.set_meta("walks", walks)
+    person.set_meta("phase", float(pedestrian_nodes.size()) * 1.7)
+    pedestrian_nodes.append(person)
+    pedestrian_origins.append(origin)
+    pedestrian_speeds.append(speed)
+
+func _animate_street_life() -> void:
+    if is_instance_valid(menu_taxi):
+        menu_taxi.position.x = -4.8 + fposmod(menu_time * 1.35, 9.6)
+    for i in range(pedestrian_nodes.size()):
+        var person := pedestrian_nodes[i]
+        if not is_instance_valid(person):
+            continue
+        if bool(person.get_meta("walks", false)):
+            var phase: float = float(person.get_meta("phase", 0.0))
+            var speed: float = pedestrian_speeds[i]
+            var origin: Vector3 = pedestrian_origins[i]
+            person.position.x = origin.x + sin(menu_time * speed + phase) * 1.15
+            person.position.y = abs(sin(menu_time * speed * 2.0 + phase)) * 0.035
+            person.rotation.y = 0.0 if cos(menu_time * speed + phase) >= 0.0 else PI
+        else:
+            person.position.y = abs(sin(menu_time * 1.8)) * 0.018
 
 func _setup_player() -> void:
     player = CharacterBody3D.new()
