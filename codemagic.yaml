@@ -90,7 +90,10 @@ workflows:
           test -f scripts/main.gd
           test -f scripts/player.gd
           "$GODOT_BIN" --version
-          echo "Project files found. Godot validation will run during Android export."
+          mkdir -p "$CM_BUILD_DIR/build"
+          echo "Project files found."
+          "$GODOT_BIN" --headless --editor --path "$CM_BUILD_DIR" --quit --verbose 2>&1 | tee "$CM_BUILD_DIR/build/godot-editor-validation.log"
+          "$GODOT_BIN" --headless --path "$CM_BUILD_DIR" --quit-after 3 --verbose 2>&1 | tee "$CM_BUILD_DIR/build/godot-runtime-smoke-test.log"
 
       - name: Create temporary Android debug signing key
         script: |
@@ -116,4 +119,5 @@ workflows:
 
     artifacts:
       - build/*.apk
+      - build/*.log
       - .godot/imported/**/*.log
