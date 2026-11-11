@@ -3,6 +3,7 @@ extends Node3D
 const PLAYER_SCRIPT = preload("res://scripts/player.gd")
 const MISSION_MANAGER_SCRIPT = preload("res://scripts/mission_manager.gd")
 const DIALOGUE_MANAGER_SCRIPT = preload("res://scripts/dialogue_manager.gd")
+const MOBONDO_EMBLEM_SCRIPT = preload("res://scripts/mobondo_emblem.gd")
 const SAVE_PATH := "user://mobondo_save.json"
 
 var player: CharacterBody3D
@@ -209,6 +210,11 @@ func _setup_main_menu() -> void:
     studio.add_theme_font_size_override("font_size", 13)
     studio.add_theme_color_override("font_color", Color(0.82, 0.61, 0.32))
     main_column.add_child(studio)
+
+    var emblem := Control.new()
+    emblem.set_script(MOBONDO_EMBLEM_SCRIPT)
+    emblem.custom_minimum_size = Vector2(104, 92)
+    main_column.add_child(emblem)
 
     var title := Label.new()
     title.text = "MOBONDO"
