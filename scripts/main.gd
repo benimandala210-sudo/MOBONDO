@@ -76,6 +76,11 @@ var saved_player_position := Vector3(0, 1, 0)
 func _ready() -> void:
     _setup_world()
     _setup_player()
+    # The market UI reads economy progress while it is being constructed.
+    # Initialize the economy before building any UI panels.
+    economy_manager = ECONOMY_MANAGER_SCRIPT.new()
+    economy_manager.economy_updated.connect(_on_economy_updated)
+    add_child(economy_manager)
     _setup_ui()
     _setup_main_menu()
     mission_manager = MISSION_MANAGER_SCRIPT.new()
@@ -90,9 +95,6 @@ func _ready() -> void:
     dialogue_manager.dialogue_closed.connect(_on_dialogue_closed)
     dialogue_manager.conversation_finished.connect(_on_conversation_finished)
     add_child(dialogue_manager)
-    economy_manager = ECONOMY_MANAGER_SCRIPT.new()
-    economy_manager.economy_updated.connect(_on_economy_updated)
-    add_child(economy_manager)
     needs_manager = NEEDS_MANAGER_SCRIPT.new()
     needs_manager.needs_updated.connect(_on_needs_updated)
     add_child(needs_manager)
