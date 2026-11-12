@@ -737,7 +737,6 @@ func _create_pedestrians() -> void:
     var customer := _create_pedestrian("Junior", Vector3(3.8, 0.0, -22.5), Color(0.18, 0.38, 0.62), false, 0.0)
     customer.set_meta("character_id", "customer_market")
     customer.set_meta("role", "customer")
-    # Vie quotidienne : enfants près du terrain et habitants devant les parcelles.
     var child_one := _create_pedestrian("Enfant joueur 1", Vector3(-3.2, 0.0, -56.0), Color(0.82, 0.48, 0.12), true, 1.05)
     child_one.set_meta("role", "child")
     var child_two := _create_pedestrian("Enfant joueur 2", Vector3(3.0, 0.0, -58.0), Color(0.22, 0.42, 0.72), true, 0.92)
@@ -748,6 +747,16 @@ func _create_pedestrians() -> void:
     var resident_two := _create_pedestrian("Mama Nzambe", Vector3(7.1, 0.0, -37.0), Color(0.48, 0.2, 0.32), false, 0.0)
     resident_two.set_meta("role", "resident")
     resident_two.set_meta("character_id", "resident_2")
+
+    # Passants supplémentaires : plusieurs silhouettes et trajectoires dans le quartier.
+    var passer_four := _create_pedestrian("Passant 4", Vector3(-2.8, 0.0, -5.0), Color(0.68, 0.48, 0.18), true, 0.62)
+    passer_four.set_meta("role", "passer")
+    var passer_five := _create_pedestrian("Passant 5", Vector3(3.0, 0.0, -16.0), Color(0.42, 0.22, 0.48), true, 0.78)
+    passer_five.set_meta("role", "passer")
+    var passer_six := _create_pedestrian("Passant 6", Vector3(-3.0, 0.0, -28.0), Color(0.18, 0.48, 0.46), true, 0.55)
+    passer_six.set_meta("role", "passer")
+    var passer_seven := _create_pedestrian("Passant 7", Vector3(3.2, 0.0, -43.0), Color(0.56, 0.28, 0.2), true, 0.7)
+    passer_seven.set_meta("role", "passer")
     _create_street_motos()
 
 func _create_street_motos() -> void:
@@ -807,25 +816,85 @@ func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color
     person.position = origin
     add_child(person)
 
+    var skin_color := Color(0.30, 0.17, 0.105)
+    if person_name.contains("Mama") or person_name == "Mado":
+        skin_color = Color(0.38, 0.22, 0.15)
+    elif person_name.contains("Enfant"):
+        skin_color = Color(0.34, 0.20, 0.13)
+
+    var dark_material := _material(Color(0.075, 0.065, 0.06))
+    var skin_material := _material(skin_color)
+    var shirt_material := _material(shirt_color)
+    var trouser_color := Color(0.10, 0.12, 0.16) if person_name.hash() % 2 == 0 else Color(0.25, 0.20, 0.16)
+    var trouser_material := _material(trouser_color)
+
     var torso := MeshInstance3D.new()
+    torso.name = "Buste"
     var torso_mesh := CapsuleMesh.new()
     torso_mesh.radius = 0.28
     torso_mesh.height = 0.95
     torso.mesh = torso_mesh
     torso.position.y = 1.0
-    torso.material_override = _material(shirt_color)
+    torso.material_override = shirt_material
     person.add_child(torso)
 
+    var neck := MeshInstance3D.new()
+    var neck_mesh := CylinderMesh.new()
+    neck_mesh.top_radius = 0.095
+    neck_mesh.bottom_radius = 0.11
+    neck_mesh.height = 0.18
+    neck.mesh = neck_mesh
+    neck.position.y = 1.48
+    neck.material_override = skin_material
+    person.add_child(neck)
+
     var head := MeshInstance3D.new()
+    head.name = "Tete"
     var head_mesh := SphereMesh.new()
     head_mesh.radius = 0.2
     head_mesh.height = 0.4
     head.mesh = head_mesh
-    head.position.y = 1.65
-    head.material_override = _material(Color(0.32, 0.19, 0.12))
+    head.position.y = 1.68
+    head.material_override = skin_material
     person.add_child(head)
 
-    var leg_material := _material(Color(0.12, 0.12, 0.14))
+    var hair := MeshInstance3D.new()
+    var hair_mesh := SphereMesh.new()
+    hair_mesh.radius = 0.205
+    hair_mesh.height = 0.19
+    hair.mesh = hair_mesh
+    hair.position = Vector3(0, 1.82, 0.015)
+    hair.scale = Vector3(1.0, 0.68, 1.0)
+    hair.material_override = dark_material
+    person.add_child(hair)
+
+    # Visage lisible à distance de caméra : yeux, nez et bouche discrets.
+    for side in [-1.0, 1.0]:
+        var eye := MeshInstance3D.new()
+        var eye_mesh := SphereMesh.new()
+        eye_mesh.radius = 0.022
+        eye_mesh.height = 0.022
+        eye.mesh = eye_mesh
+        eye.position = Vector3(side * 0.072, 1.70, -0.176)
+        eye.material_override = dark_material
+        person.add_child(eye)
+    var nose := MeshInstance3D.new()
+    var nose_mesh := SphereMesh.new()
+    nose_mesh.radius = 0.035
+    nose_mesh.height = 0.055
+    nose.mesh = nose_mesh
+    nose.position = Vector3(0, 1.65, -0.195)
+    nose.material_override = skin_material
+    person.add_child(nose)
+    var mouth := MeshInstance3D.new()
+    var mouth_mesh := BoxMesh.new()
+    mouth_mesh.size = Vector3(0.075, 0.018, 0.018)
+    mouth.mesh = mouth_mesh
+    mouth.position = Vector3(0, 1.595, -0.19)
+    mouth.material_override = dark_material
+    person.add_child(mouth)
+
+    var leg_nodes: Array[MeshInstance3D] = []
     for side in [-1.0, 1.0]:
         var leg := MeshInstance3D.new()
         var leg_mesh := CapsuleMesh.new()
@@ -834,14 +903,44 @@ func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color
         leg.name = "Jambe gauche" if side < 0.0 else "Jambe droite"
         leg.mesh = leg_mesh
         leg.position = Vector3(side * 0.13, 0.38, 0)
-        leg.material_override = leg_material
+        leg.material_override = trouser_material
         person.add_child(leg)
+        leg_nodes.append(leg)
 
-    var leg_nodes: Array[MeshInstance3D] = []
-    for child in person.get_children():
-        if child is MeshInstance3D and child.name.begins_with("Jambe"):
-            leg_nodes.append(child)
+        var shoe := MeshInstance3D.new()
+        var shoe_mesh := BoxMesh.new()
+        shoe_mesh.size = Vector3(0.19, 0.11, 0.29)
+        shoe.mesh = shoe_mesh
+        shoe.position = Vector3(side * 0.13, 0.09, -0.055)
+        shoe.material_override = dark_material
+        person.add_child(shoe)
+
+    var arm_nodes: Array[Node3D] = []
+    for side in [-1.0, 1.0]:
+        var shoulder := Node3D.new()
+        shoulder.name = "Bras gauche" if side < 0.0 else "Bras droit"
+        shoulder.position = Vector3(side * 0.31, 1.27, 0)
+        person.add_child(shoulder)
+        var arm := MeshInstance3D.new()
+        var arm_mesh := CapsuleMesh.new()
+        arm_mesh.radius = 0.105
+        arm_mesh.height = 0.62
+        arm.mesh = arm_mesh
+        arm.position = Vector3(side * 0.025, -0.29, 0)
+        arm.material_override = shirt_material
+        shoulder.add_child(arm)
+        var hand := MeshInstance3D.new()
+        var hand_mesh := SphereMesh.new()
+        hand_mesh.radius = 0.085
+        hand_mesh.height = 0.15
+        hand.mesh = hand_mesh
+        hand.position = Vector3(side * 0.025, -0.59, 0)
+        hand.material_override = skin_material
+        shoulder.add_child(hand)
+        arm_nodes.append(shoulder)
+
     person.set_meta("leg_nodes", leg_nodes)
+    person.set_meta("arm_nodes", arm_nodes)
     person.set_meta("walks", walks)
     person.set_meta("role", "passer" if person_name.begins_with("Passant") else "resident")
     person.set_meta("active_walks", walks)
@@ -886,6 +985,11 @@ func _animate_street_life(delta: float) -> void:
                 var leg = legs[leg_index]
                 if is_instance_valid(leg):
                     leg.rotation.x = sin(phase + float(leg_index) * PI) * 0.38
+            var arms: Array = person.get_meta("arm_nodes", [])
+            for arm_index in range(arms.size()):
+                var arm = arms[arm_index]
+                if is_instance_valid(arm):
+                    arm.rotation.x = sin(phase + float(arm_index) * PI + PI) * 0.28
             person.set_meta("activity", "walking")
         else:
             person.position.y = abs(sin(menu_time * 1.8)) * 0.018
@@ -893,6 +997,10 @@ func _animate_street_life(delta: float) -> void:
             for leg in legs:
                 if is_instance_valid(leg):
                     leg.rotation.x = 0.0
+            var arms: Array = person.get_meta("arm_nodes", [])
+            for arm in arms:
+                if is_instance_valid(arm):
+                    arm.rotation.x = 0.0
             if str(person.get_meta("role", "")) == "seller":
                 person.set_meta("activity", "working")
             elif str(person.get_meta("role", "")) == "customer":
