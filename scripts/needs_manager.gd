@@ -51,8 +51,17 @@ func take_shower() -> void:
 
 func sleep(hours: float = 8.0) -> float:
     var duration := clampf(hours, 1.0, 12.0) * 60.0
+    # Le personnage continue à avoir faim et soif pendant la nuit,
+    # mais récupère son énergie au lieu de la perdre.
+    hunger = maxf(0.0, hunger - 0.045 * duration)
+    thirst = maxf(0.0, thirst - 0.075 * duration)
+    hygiene = maxf(0.0, hygiene - 0.012 * duration)
     energy = minf(100.0, energy + duration * 0.18)
-    health = minf(100.0, health + duration * 0.018)
+    if hunger <= 5.0 or thirst <= 5.0:
+        health = maxf(1.0, health - 0.035 * duration)
+    else:
+        health = minf(100.0, health + duration * 0.018)
+    save_state()
     _emit_update()
     return duration
 
