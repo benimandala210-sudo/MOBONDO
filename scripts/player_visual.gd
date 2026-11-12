@@ -58,9 +58,9 @@ func _build_character() -> void:
     left_leg = _limb_pivot("Jambe gauche", Vector3(-0.16, 0.55, 0))
     right_leg = _limb_pivot("Jambe droite", Vector3(0.16, 0.55, 0))
     for pivot in [left_leg, right_leg]:
-        _capsule_child(pivot, "Pantalon", 0.14, 0.55, trousers, Vector3(0, -0.25, 0))
-        _capsule_child(pivot, "Tibia", 0.105, 0.42, trousers, Vector3(0, -0.62, 0))
-        _box_child(pivot, "Chaussure", Vector3(0.23, 0.13, 0.36), shoes, Vector3(0, -0.87, -0.07))
+        _capsule_child(pivot, "Pantalon", 0.14, 0.42, trousers, Vector3(0, -0.16, 0))
+        _capsule_child(pivot, "Tibia", 0.105, 0.34, trousers, Vector3(0, -0.43, 0))
+        _box_child(pivot, "Chaussure", Vector3(0.23, 0.13, 0.36), shoes, Vector3(0, -0.45, -0.07))
 
 func _limb_pivot(node_name: String, pivot_position: Vector3) -> Node3D:
     var pivot := Node3D.new()
