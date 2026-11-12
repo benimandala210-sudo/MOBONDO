@@ -1774,9 +1774,15 @@ func _setup_market_ui(layer: CanvasLayer) -> void:
     market_panel.anchor_bottom = 0.86
     market_panel.visible = false
     layer.add_child(market_panel)
+    var scroll := ScrollContainer.new()
+    scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+    scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+    market_panel.add_child(scroll)
     var column := VBoxContainer.new()
+    column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     column.add_theme_constant_override("separation", 8)
-    market_panel.add_child(column)
+    scroll.add_child(column)
     var title := Label.new()
     title.text = "ZANDO YA MAMA SIFA"
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
