@@ -130,11 +130,12 @@ func choose_option(index: int) -> bool:
     var choice: Dictionary = active_choices[index]
     var choice_id := str(choice.get("id", ""))
     var affinity := int(choice.get("affinity", 0))
-    relationship_scores[active_character_id] = int(relationship_scores.get(active_character_id, 0)) + affinity
-
     var flag := str(choice.get("flag", ""))
-    if not flag.is_empty() and not story_flags.has(flag):
-        story_flags.append(flag)
+    var first_time := flag.is_empty() or not story_flags.has(flag)
+    if first_time:
+        relationship_scores[active_character_id] = int(relationship_scores.get(active_character_id, 0)) + affinity
+        if not flag.is_empty():
+            story_flags.append(flag)
 
     dialogue_history.append(active_character_id + ":" + choice_id)
     _save_state()
