@@ -243,22 +243,39 @@ func _load_world_state() -> void:
         selected_mode = loaded_mode
 
 func _setup_world() -> void:
+    # Ciel procédural complet : évite le fond noir observé sur Android.
     var environment := WorldEnvironment.new()
     var env := Environment.new()
     env.background_mode = Environment.BG_SKY
-    env.sky = Sky.new()
+    var sky := Sky.new()
+    var sky_material := ProceduralSkyMaterial.new()
+    sky_material.sky_top_color = Color(0.12, 0.32, 0.58)
+    sky_material.sky_horizon_color = Color(0.72, 0.78, 0.82)
+    sky_material.sky_curve = 0.18
+    sky_material.ground_bottom_color = Color(0.18, 0.22, 0.17)
+    sky_material.ground_horizon_color = Color(0.58, 0.55, 0.46)
+    sky_material.sun_angle_max = 18.0
+    sky_material.sun_curve = 0.12
+    sky.sky_material = sky_material
+    env.sky = sky
+    env.background_energy_multiplier = 0.9
     env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
     env.ambient_light_color = Color(0.72, 0.78, 0.9)
     env.ambient_light_energy = 0.8
     env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
+    env.fog_enabled = true
+    env.fog_light_color = Color(0.67, 0.72, 0.72)
+    env.fog_density = 0.0018
+    env.fog_sun_scatter = 0.12
     environment.environment = env
     add_child(environment)
 
     sunlight = DirectionalLight3D.new()
     sunlight.rotation_degrees = Vector3(-38, -28, 0)
-    sunlight.light_color = Color(1.0, 0.78, 0.55)
+    sunlight.light_color = Color(1.0, 0.82, 0.66)
     sunlight.light_energy = 1.15
-    sunlight.shadow_enabled = false
+    sunlight.shadow_enabled = true
+    sunlight.directional_shadow_max_distance = 65.0
     add_child(sunlight)
 
     # Construction complète du premier secteur jouable Mapela–Raïs.
