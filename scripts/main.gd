@@ -771,6 +771,18 @@ func _animate_street_life(delta: float) -> void:
                 person.set_meta("activity", "standing")
 
 
+func _skip_game_time(minutes: float) -> void:
+    if minutes <= 0.0:
+        return
+    var total_minutes := world_minutes + minutes
+    var crossed_days := int(floor(total_minutes / 1440.0))
+    world_minutes = fposmod(total_minutes, 1440.0)
+    for day_index in range(crossed_days):
+        if is_instance_valid(economy_manager):
+            economy_manager.reset_daily()
+    _apply_npc_routines(int(world_minutes / 60.0))
+    _update_world_clock(0.0)
+
 func _update_world_clock(delta: float) -> void:
     # Une seconde réelle représente une minute dans le monde du jeu.
     var previous_minutes := world_minutes
@@ -1220,6 +1232,14 @@ func _setup_needs_ui(layer: CanvasLayer) -> void:
     rest_button.text = "SE REPOSER — 15 minutes"
     rest_button.pressed.connect(_rest_player)
     column.add_child(rest_button)
+    var sleep_button := Button.new()
+    sleep_button.text = "DORMIR — 8 heures"
+    sleep_button.pressed.connect(_sleep_player)
+    column.add_child(sleep_button)
+    var shower_button := Button.new()
+    shower_button.text = "SE LAVER — utiliser 1 eau"
+    shower_button.pressed.connect(_shower_player)
+    column.add_child(shower_button)
     var close_button := Button.new()
     close_button.text = "FERMER"
     close_button.pressed.connect(_toggle_needs_panel)
@@ -1246,10 +1266,20 @@ func _use_food() -> void:
 
 func _rest_player() -> void:
     needs_manager.rest()
-    world_minutes = fposmod(world_minutes + 15.0, 1440.0)
-    _update_world_clock(0.0)
+    _skip_game_time(15.0)
     needs_message_label.text = "Opemi mwa ntango. Makasi ezongi."
     _save_world_state()
+
+func _sleep_player() -> void:
+    var minutes_slept := needs_manager.sleep(8.0)
+    _skip_game_time(minutes_slept)
+    needs_message_label.text = "Olali ngonga 8. Mokolo ya sika ebandi."
+    _save_world_state()
+
+func _shower_player() -> void:
+    if economy_manager.use_item("eau"):
+        needs_manager.take_shower()
+        needs_message_label.text = "Osukoli nzoto. Ozali peto."
 
 func _on_needs_updated(hunger: float, thirst: float, energy: float, health: float, hygiene: float) -> void:
     if not is_instance_valid(needs_label):
@@ -1344,10 +1374,26 @@ func _setup_market_ui(layer: CanvasLayer) -> void:
         sell_button.text = "Teka"
         sell_button.pressed.connect(_sell_market_item.bind(str(good[1])))
         row.add_child(sell_button)
+    var job_title := Label.new()
+    job_title.text = "MISALA YA MOKOLO"
+    job_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    column.add_child(job_title)
     var job_button := Button.new()
-    job_button.text = "Salisa komema biloko — zwa 4 000 FC"
-    job_button.pressed.connect(_do_market_job)
+    job_button.text = "Transporter marchandises — 4 000 FC"
+    job_button.pressed.connect(_do_job.bind("porter"))
     column.add_child(job_button)
+    var cleaning_button := Button.new()
+    cleaning_button.text = "Nettoyer le marché — 2 500 FC"
+    cleaning_button.pressed.connect(_do_job.bind("cleaning"))
+    column.add_child(cleaning_button)
+    var delivery_button := Button.new()
+    delivery_button.text = "Livraison locale — 6 000 FC"
+    delivery_button.pressed.connect(_do_job.bind("delivery"))
+    column.add_child(delivery_button)
+    var work_progress_label := Label.new()
+    work_progress_label.name = "WorkProgressLabel"
+    work_progress_label.text = economy_manager.get_work_progress_text()
+    column.add_child(work_progress_label)
     market_message_label = Label.new()
     market_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     column.add_child(market_message_label)
@@ -1378,6 +1424,12 @@ func _sell_market_item(item_id: String) -> void:
 
 func _do_market_job() -> void:
     economy_manager.do_market_job()
+
+func _do_job(job_id: String) -> void:
+    economy_manager.do_job(job_id)
+    var progress_label := market_panel.find_child("WorkProgressLabel", true, false)
+    if progress_label is Label:
+        progress_label.text = economy_manager.get_work_progress_text()
 
 func _on_economy_updated(balance: int, inventory: Dictionary, message: String) -> void:
     if is_instance_valid(wallet_label):
