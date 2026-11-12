@@ -42,9 +42,30 @@ func _build_character() -> void:
 
     torso = _capsule("Torse", 0.34, 0.82, shirt, Vector3(0, 1.04, 0))
     _capsule("Bassin", 0.29, 0.34, trousers, Vector3(0, 0.61, 0))
-    _sphere("Tête", 0.225, skin, Vector3(0, 1.78, 0))
-    _sphere("Cheveux", 0.23, hair, Vector3(0, 1.91, 0))
+    _capsule("Tête", 0.225, 0.4, skin, Vector3(0, 1.78, 0))
+    _sphere("Cheveux", 0.23, hair, Vector3(0, 1.94, 0))
+    get_node("Cheveux").scale = Vector3(1.0, 0.42, 1.0)
     _capsule("Cou", 0.105, 0.18, skin, Vector3(0, 1.53, 0))
+
+    # Visage lisible de face : yeux, sourcils, nez, bouche et oreilles.
+    var eye_white := _mat(Color(0.91, 0.88, 0.78))
+    var eye_dark := _mat(Color(0.035, 0.025, 0.02))
+    var face_detail := _mat(Color(0.19, 0.105, 0.075))
+    for eye_x in [-0.078, 0.078]:
+        _sphere("Blanc oeil", 0.034, eye_white, Vector3(eye_x, 1.81, -0.198))
+        _sphere("Pupille", 0.018, eye_dark, Vector3(eye_x, 1.81, -0.226))
+        _box_child(self, "Sourcil", Vector3(0.075, 0.018, 0.025), hair, Vector3(eye_x, 1.865, -0.205))
+    _sphere("Nez", 0.043, skin, Vector3(0, 1.735, -0.225))
+    _box_child(self, "Bouche", Vector3(0.075, 0.018, 0.018), face_detail, Vector3(0, 1.665, -0.216))
+    for ear_x in [-0.22, 0.22]:
+        _sphere("Oreille", 0.055, skin, Vector3(ear_x, 1.78, 0))
+
+    # Détails du vêtement : col, poche, boutons et ceinture.
+    _capsule("Col chemise", 0.12, 0.12, shirt, Vector3(0, 1.43, -0.015))
+    _box_child(self, "Poche poitrine", Vector3(0.13, 0.16, 0.025), _mat(Color(0.65, 0.59, 0.47)), Vector3(0.19, 1.16, -0.315))
+    for button_index in range(3):
+        _sphere("Bouton chemise", 0.018, _mat(Color(0.88, 0.82, 0.68)), Vector3(0, 1.22 - float(button_index) * 0.13, -0.337))
+    _box_child(self, "Ceinture", Vector3(0.42, 0.07, 0.31), _mat(Color(0.055, 0.045, 0.035)), Vector3(0, 0.68, -0.01))
 
     left_arm = _limb_pivot("Bras gauche", Vector3(-0.39, 1.34, 0))
     right_arm = _limb_pivot("Bras droit", Vector3(0.39, 1.34, 0))
@@ -61,6 +82,7 @@ func _build_character() -> void:
         _capsule_child(pivot, "Pantalon", 0.14, 0.42, trousers, Vector3(0, -0.16, 0))
         _capsule_child(pivot, "Tibia", 0.105, 0.34, trousers, Vector3(0, -0.43, 0))
         _box_child(pivot, "Chaussure", Vector3(0.23, 0.13, 0.36), shoes, Vector3(0, -0.45, -0.07))
+        _box_child(pivot, "Semelle", Vector3(0.24, 0.045, 0.37), _mat(Color(0.018, 0.018, 0.02)), Vector3(0, -0.515, -0.07))
 
 func _limb_pivot(node_name: String, pivot_position: Vector3) -> Node3D:
     var pivot := Node3D.new()
