@@ -351,7 +351,7 @@ func _create_mosala_market(origin: Vector3) -> void:
     for i in range(4):
         var x := -6.0 + float(i) * 4.0
         _add_visual_box("Etal marché Mosala", origin + Vector3(x, 1.0, -2.0), Vector3(3.0, 2.0, 2.8), Color(0.48, 0.29, 0.17))
-        _add_visual_box("Bâche étal Pascal", origin + Vector3(x, 2.25, -2.0), Vector3(3.4, 0.12, 3.2), awning_colors[i])
+        _add_visual_box("Bâche étal Mosala", origin + Vector3(x, 2.25, -2.0), Vector3(3.4, 0.12, 3.2), awning_colors[i])
         for item in range(3):
             _add_visual_box("Produits marché Mosala", origin + Vector3(x - 0.8 + float(item) * 0.8, 2.0, -2.0), Vector3(0.5, 0.3, 0.55), Color(0.76, 0.43, 0.12))
     _add_visual_box("Panneau vigilance marché", origin + Vector3(8.5, 1.8, 5.0), Vector3(0.15, 2.4, 2.6), Color(0.16, 0.2, 0.18))
