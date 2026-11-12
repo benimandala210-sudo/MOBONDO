@@ -45,6 +45,21 @@ func rest() -> void:
     health = minf(100.0, health + 2.0)
     _emit_update()
 
+func receive_treatment(amount: float = 40.0) -> void:
+    health = minf(100.0, health + maxf(0.0, amount))
+    energy = minf(100.0, energy + 5.0)
+    _emit_update()
+
+func exercise() -> void:
+    energy = maxf(0.0, energy - 12.0)
+    health = minf(100.0, health + 3.0)
+    hygiene = maxf(0.0, hygiene - 4.0)
+    _emit_update()
+
+func meditate() -> void:
+    energy = minf(100.0, energy + 15.0)
+    _emit_update()
+
 func take_shower() -> void:
     hygiene = minf(100.0, hygiene + 55.0)
     _emit_update()
