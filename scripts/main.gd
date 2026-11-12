@@ -1040,7 +1040,7 @@ func _update_traffic(delta: float) -> void:
 
         # Priorité aux piétons : ralentissement puis arrêt s'ils traversent devant le véhicule.
         for person in pedestrian_nodes:
-            if not is_instance_valid(person) or not person.visible:
+            if not is_instance_valid(person) or not person.visible or not bool(person.get_meta("walks", false)):
                 continue
             var lateral_distance := absf(person.position.x - vehicle.position.x)
             var forward_distance := (person.position.z - vehicle.position.z) * direction
