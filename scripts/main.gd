@@ -4,6 +4,7 @@ const PLAYER_SCENE = preload("res://scenes/characters/player/player.tscn")
 const MISSION_MANAGER_SCRIPT = preload("res://scripts/mission_manager.gd")
 const DIALOGUE_MANAGER_SCRIPT = preload("res://scripts/dialogue_manager.gd")
 const ECONOMY_MANAGER_SCRIPT = preload("res://scripts/economy_manager.gd")
+const NEEDS_MANAGER_SCRIPT = preload("res://scripts/needs_manager.gd")
 const MOBONDO_EMBLEM_SCRIPT = preload("res://scripts/mobondo_emblem.gd")
 const SAVE_PATH := "user://mobondo_save.json"
 
@@ -12,6 +13,10 @@ var camera: Camera3D
 var mission_manager
 var dialogue_manager
 var economy_manager
+var needs_manager
+var needs_label: Label
+var needs_panel: PanelContainer
+var needs_message_label: Label
 var market_panel: PanelContainer
 var wallet_label: Label
 var market_balance_label: Label
@@ -82,6 +87,9 @@ func _ready() -> void:
     economy_manager = ECONOMY_MANAGER_SCRIPT.new()
     economy_manager.economy_updated.connect(_on_economy_updated)
     add_child(economy_manager)
+    needs_manager = NEEDS_MANAGER_SCRIPT.new()
+    needs_manager.needs_updated.connect(_on_needs_updated)
+    add_child(needs_manager)
     _load_world_state()
     if is_instance_valid(continue_button):
         continue_button.visible = has_saved_world
@@ -147,6 +155,8 @@ func _notification(what: int) -> void:
 func _save_world_state() -> void:
     if not is_instance_valid(player) or menu_active:
         return
+    if is_instance_valid(needs_manager):
+        needs_manager.save_state()
     var data := {
         "version": 1,
         "player_position": {
@@ -765,6 +775,8 @@ func _update_world_clock(delta: float) -> void:
     # Une seconde réelle représente une minute dans le monde du jeu.
     var previous_minutes := world_minutes
     world_minutes = fposmod(world_minutes + delta, 1440.0)
+    if is_instance_valid(needs_manager) and not menu_active:
+        needs_manager.advance(delta)
     if world_minutes < previous_minutes and is_instance_valid(economy_manager):
         economy_manager.reset_daily()
     var hour := int(world_minutes / 60.0)
@@ -846,6 +858,11 @@ func _setup_ui() -> void:
     wallet_label = Label.new()
     wallet_label.text = "Mbongo: 10 000 FC"
     column.add_child(wallet_label)
+    needs_label = Label.new()
+    needs_label.text = "Besoins : chargement..."
+    needs_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    needs_label.add_theme_font_size_override("font_size", 12)
+    column.add_child(needs_label)
 
     var controls := HBoxContainer.new()
     controls.anchor_left = 0.0
@@ -882,6 +899,12 @@ func _setup_ui() -> void:
     jump_button.pressed.connect(player.request_jump)
     controls.add_child(jump_button)
 
+    var needs_button := Button.new()
+    needs_button.text = "BESOINS"
+    needs_button.custom_minimum_size = Vector2(96, 56)
+    needs_button.pressed.connect(_toggle_needs_panel)
+    controls.add_child(needs_button)
+
     action_button = Button.new()
     action_button.text = "SALA"
     action_button.custom_minimum_size = Vector2(100, 56)
@@ -890,6 +913,7 @@ func _setup_ui() -> void:
 
     _setup_dialogue_ui(layer)
     _setup_market_ui(layer)
+    _setup_needs_ui(layer)
 
 func _setup_main_menu() -> void:
     menu_layer = CanvasLayer.new()
@@ -1158,6 +1182,83 @@ func _play_start_transition() -> void:
     game_ui_layer.visible = true
     transition_layer.queue_free()
     transition_active = false
+
+
+func _setup_needs_ui(layer: CanvasLayer) -> void:
+    needs_panel = PanelContainer.new()
+    needs_panel.anchor_left = 1.0
+    needs_panel.anchor_top = 0.08
+    needs_panel.anchor_right = 1.0
+    needs_panel.anchor_bottom = 0.08
+    needs_panel.offset_left = -270
+    needs_panel.offset_top = 0
+    needs_panel.offset_right = -14
+    needs_panel.offset_bottom = 255
+    needs_panel.visible = false
+    layer.add_child(needs_panel)
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation", 7)
+    needs_panel.add_child(column)
+    var title := Label.new()
+    title.text = "ÉTAT DU PERSONNAGE"
+    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    title.add_theme_font_size_override("font_size", 18)
+    column.add_child(title)
+    needs_message_label = Label.new()
+    needs_message_label.text = "Gère tes besoins pour rester en forme."
+    needs_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    column.add_child(needs_message_label)
+    var water_button := Button.new()
+    water_button.text = "BOIRE — utiliser 1 eau"
+    water_button.pressed.connect(_use_water)
+    column.add_child(water_button)
+    var food_button := Button.new()
+    food_button.text = "MANGER — utiliser 1 pain"
+    food_button.pressed.connect(_use_food)
+    column.add_child(food_button)
+    var rest_button := Button.new()
+    rest_button.text = "SE REPOSER — 15 minutes"
+    rest_button.pressed.connect(_rest_player)
+    column.add_child(rest_button)
+    var close_button := Button.new()
+    close_button.text = "FERMER"
+    close_button.pressed.connect(_toggle_needs_panel)
+    column.add_child(close_button)
+
+func _toggle_needs_panel() -> void:
+    if not is_instance_valid(needs_panel):
+        return
+    needs_panel.visible = not needs_panel.visible
+    if needs_panel.visible and is_instance_valid(player):
+        player.set_physics_process(false)
+    elif is_instance_valid(player) and not dialogue_panel.visible and not market_panel.visible:
+        player.set_physics_process(true)
+
+func _use_water() -> void:
+    if economy_manager.use_item("eau"):
+        needs_manager.drink()
+        needs_message_label.text = "Omai maye. Ozali komiyoka malamu."
+
+func _use_food() -> void:
+    if economy_manager.use_item("pain"):
+        needs_manager.eat()
+        needs_message_label.text = "Olii bilei. Nzala ekiti."
+
+func _rest_player() -> void:
+    needs_manager.rest()
+    world_minutes = fposmod(world_minutes + 15.0, 1440.0)
+    _update_world_clock(0.0)
+    needs_message_label.text = "Opemi mwa ntango. Makasi ezongi."
+    _save_world_state()
+
+func _on_needs_updated(hunger: float, thirst: float, energy: float, health: float, hygiene: float) -> void:
+    if not is_instance_valid(needs_label):
+        return
+    needs_label.text = "Nzala %d%%  |  Mayi %d%%  |  Makasi %d%%\nSante %d%%  |  Peti %d%%" % [
+        roundi(hunger), roundi(thirst), roundi(energy), roundi(health), roundi(hygiene)
+    ]
+    if is_instance_valid(needs_message_label):
+        needs_message_label.text = needs_manager.get_summary()
 
 func _setup_dialogue_ui(layer: CanvasLayer) -> void:
     dialogue_panel = PanelContainer.new()
