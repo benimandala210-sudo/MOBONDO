@@ -49,6 +49,13 @@ func take_shower() -> void:
     hygiene = minf(100.0, hygiene + 55.0)
     _emit_update()
 
+func sleep(hours: float = 8.0) -> float:
+    var duration := clampf(hours, 1.0, 12.0) * 60.0
+    energy = minf(100.0, energy + duration * 0.18)
+    health = minf(100.0, health + duration * 0.018)
+    _emit_update()
+    return duration
+
 func get_summary() -> String:
     return "Faim %d%%  •  Soif %d%%  •  Énergie %d%%\nSanté %d%%  •  Hygiène %d%%" % [
         roundi(hunger), roundi(thirst), roundi(energy), roundi(health), roundi(hygiene)
