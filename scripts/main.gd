@@ -53,6 +53,10 @@ var world_minutes := 7.0 * 60.0
 var routine_refresh_timer := 0.0
 var sunlight: DirectionalLight3D
 var world_clock_label: Label
+var camera_yaw := 0.0
+var camera_pitch := 0.22
+var camera_distance := 7.0
+var camera_dragging := false
 
 func _ready() -> void:
     _setup_world()
@@ -92,9 +96,14 @@ func _process(delta: float) -> void:
                 glow_color.a = 0.12 + (sin(menu_time * 0.7) + 1.0) * 0.025
                 menu_glow.color = glow_color
         elif is_instance_valid(player) and not transition_active:
-            var camera_target := player.global_position + Vector3(0, 5.6, 9.0)
-            camera.global_position = camera.global_position.lerp(camera_target, minf(delta * 5.5, 1.0))
-            var look_target := player.global_position + Vector3(0, 1.15, 0)
+            var orbit_offset := Vector3(
+                sin(camera_yaw) * cos(camera_pitch),
+                sin(camera_pitch),
+                cos(camera_yaw) * cos(camera_pitch)
+            ) * camera_distance
+            var camera_target := player.global_position + Vector3(0, 1.8, 0) + orbit_offset
+            camera.global_position = camera.global_position.lerp(camera_target, minf(delta * 7.0, 1.0))
+            var look_target := player.global_position + Vector3(0, 1.25, 0)
             camera.look_at(look_target, Vector3.UP)
     if not menu_active:
         _update_mobile_direction()
@@ -104,6 +113,19 @@ func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo:
         if event.keycode == KEY_E:
             _perform_action()
+    elif event is InputEventScreenDrag and not menu_active:
+        var screen_width := get_viewport().get_visible_rect().size.x
+        if event.position.x >= screen_width * 0.38:
+            _rotate_game_camera(event.relative)
+    elif event is InputEventMouseButton:
+        if event.button_index == MOUSE_BUTTON_RIGHT:
+            camera_dragging = event.pressed
+    elif event is InputEventMouseMotion and camera_dragging and not menu_active:
+        _rotate_game_camera(event.relative)
+
+func _rotate_game_camera(delta_pixels: Vector2) -> void:
+    camera_yaw -= delta_pixels.x * 0.006
+    camera_pitch = clampf(camera_pitch + delta_pixels.y * 0.004, -0.12, 0.62)
 
 func _setup_world() -> void:
     var environment := WorldEnvironment.new()
@@ -990,6 +1012,8 @@ func _play_start_transition() -> void:
         player.visible = true
         player.set_physics_process(false)
 
+    camera_yaw = 0.0
+    camera_pitch = 0.22
     camera.global_position = Vector3(0, 6.5, 12.0)
     camera.look_at(Vector3(0, 1.0, 0), Vector3.UP)
 
