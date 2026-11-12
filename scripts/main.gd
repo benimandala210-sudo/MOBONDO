@@ -38,6 +38,7 @@ var main_menu_panel: PanelContainer
 var mode_panel: PanelContainer
 var settings_panel: PanelContainer
 var menu_message: Label
+var continue_button: Button
 var selected_mode := "histoire"
 var menu_active := true
 var menu_taxi: Node3D
@@ -82,6 +83,8 @@ func _ready() -> void:
     economy_manager.economy_updated.connect(_on_economy_updated)
     add_child(economy_manager)
     _load_world_state()
+    if is_instance_valid(continue_button):
+        continue_button.visible = has_saved_world
     _refresh_mission()
 
 func _process(delta: float) -> void:
@@ -904,6 +907,11 @@ func _setup_main_menu() -> void:
     play_button.pressed.connect(_show_mode_selection)
     main_column.add_child(play_button)
 
+    continue_button = _make_menu_button("KOBÁKA LISUSU", false)
+    continue_button.visible = false
+    continue_button.pressed.connect(_continue_saved_game)
+    main_column.add_child(continue_button)
+
     var settings_button := _make_menu_button("PARAMÈTRES", false)
     settings_button.pressed.connect(_show_settings)
     main_column.add_child(settings_button)
@@ -972,7 +980,7 @@ func _setup_main_menu() -> void:
     settings_column.add_child(settings_back)
 
     menu_message = Label.new()
-    menu_message.text = "Version prototype — interface en construction"
+    menu_message.text = "UN MONDE. UNE VIE. TA PROPRE HISTOIRE."
     menu_message.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     menu_message.add_theme_font_size_override("font_size", 10)
     menu_message.add_theme_color_override("font_color", Color(0.7, 0.68, 0.62))
@@ -1026,6 +1034,10 @@ func _make_menu_button(caption: String, highlighted: bool) -> Button:
         hover.set_corner_radius_all(8)
         button.add_theme_stylebox_override("hover", hover)
     return button
+
+func _continue_saved_game() -> void:
+    if has_saved_world:
+        _start_game(selected_mode)
 
 func _show_mode_selection() -> void:
     main_menu_panel.visible = false
