@@ -61,6 +61,9 @@ var pedestrian_nodes: Array[Node3D] = []
 var pedestrian_origins: Array[Vector3] = []
 var pedestrian_speeds: Array[float] = []
 var street_moto: Node3D
+var traffic_vehicles: Array[Node3D] = []
+var traffic_base_speeds: Array[float] = []
+var traffic_directions: Array[float] = []
 var world_minutes := 7.0 * 60.0
 var routine_refresh_timer := 0.0
 var sunlight: DirectionalLight3D
@@ -296,6 +299,7 @@ func _setup_world() -> void:
     _create_mapela_street_directory()
     _create_pedestrians()
     _create_menu_taxi()
+    _setup_traffic()
 
 
 
@@ -964,12 +968,67 @@ func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color
     pedestrian_speeds.append(speed)
     return person
 
-func _animate_street_life(delta: float) -> void:
+func _setup_traffic() -> void:
+    traffic_vehicles.clear()
+    traffic_base_speeds.clear()
+    traffic_directions.clear()
+
     if is_instance_valid(menu_taxi):
-        menu_taxi.position.x = -4.8 + fposmod(menu_time * 1.35, 9.6)
+        _register_traffic_vehicle(menu_taxi, -1.65, -8.0, -1.0, 5.2, "Taxi jaune — circulation")
+        var second_taxi: Node3D = menu_taxi.duplicate() as Node3D
+        if second_taxi != null:
+            second_taxi.name = "Taxi jaune — circulation 2"
+            add_child(second_taxi)
+            _register_traffic_vehicle(second_taxi, -1.65, -43.0, -1.0, 4.7, "Taxi jaune — circulation 2")
+
     if is_instance_valid(street_moto):
-        street_moto.position.z = -2.0 - fposmod(menu_time * 3.2, 68.0)
-        street_moto.rotation.y = PI
+        _register_traffic_vehicle(street_moto, 1.65, -28.0, 1.0, 6.4, "Moto taxi — circulation")
+        var second_moto: Node3D = street_moto.duplicate() as Node3D
+        if second_moto != null:
+            second_moto.name = "Moto taxi — circulation 2"
+            add_child(second_moto)
+            _register_traffic_vehicle(second_moto, 1.65, 8.0, 1.0, 5.8, "Moto taxi — circulation 2")
+
+func _register_traffic_vehicle(vehicle: Node3D, lane_x: float, start_z: float, direction: float, speed: float, label: String) -> void:
+    vehicle.position = Vector3(lane_x, 0.0, start_z)
+    vehicle.rotation.y = PI if direction > 0.0 else 0.0
+    vehicle.set_meta("traffic_label", label)
+    vehicle.set_meta("traffic_active", true)
+    traffic_vehicles.append(vehicle)
+    traffic_base_speeds.append(speed)
+    traffic_directions.append(direction)
+
+func _update_traffic(delta: float) -> void:
+    if traffic_vehicles.is_empty():
+        return
+
+    var hour := int(floor(world_minutes / 60.0)) % 24
+    var traffic_active := hour >= 5 and hour < 23
+    var daylight_factor := 1.0 if hour >= 6 and hour < 19 else 0.72
+
+    for i in range(traffic_vehicles.size()):
+        var vehicle := traffic_vehicles[i]
+        if not is_instance_valid(vehicle):
+            continue
+
+        vehicle.visible = traffic_active
+        if not traffic_active:
+            continue
+
+        var direction := traffic_directions[i]
+        var speed := traffic_base_speeds[i] * daylight_factor
+        vehicle.position.z += direction * speed * delta
+
+        if direction < 0.0 and vehicle.position.z < -59.0:
+            vehicle.position.z = 25.0
+        elif direction > 0.0 and vehicle.position.z > 25.0:
+            vehicle.position.z = -59.0
+
+        vehicle.rotation.y = PI if direction > 0.0 else 0.0
+        vehicle.set_meta("traffic_speed", speed)
+
+func _animate_street_life(delta: float) -> void:
+    _update_traffic(delta)
 
     # Déplacements autonomes sur de petites routes de quartier, avec pauses.
     for i in range(pedestrian_nodes.size()):
