@@ -28,6 +28,7 @@ var wallet_label: Label
 var market_balance_label: Label
 var market_inventory_label: Label
 var market_message_label: Label
+var business_status_label: Label
 var game_ui_layer: CanvasLayer
 var dialogue_panel: PanelContainer
 var dialogue_speaker_label: Label
@@ -1819,6 +1820,25 @@ func _setup_market_ui(layer: CanvasLayer) -> void:
     work_progress_label.name = "WorkProgressLabel"
     work_progress_label.text = "Progression du travail : chargement..."
     column.add_child(work_progress_label)
+    var business_title := Label.new()
+    business_title.text = "TON PREMIER COMMERCE — KIOSQUE YA YO"
+    business_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    column.add_child(business_title)
+    business_status_label = Label.new()
+    business_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    column.add_child(business_status_label)
+    var buy_business_button := Button.new()
+    buy_business_button.text = "Acheter mon kiosque — 20 000 FC"
+    buy_business_button.pressed.connect(_buy_player_business)
+    column.add_child(buy_business_button)
+    var operate_business_button := Button.new()
+    operate_business_button.text = "Ouvrir le kiosque et vendre le stock"
+    operate_business_button.pressed.connect(_operate_player_business)
+    column.add_child(operate_business_button)
+    var business_tip := Label.new()
+    business_tip.text = "Conseil: achète eau, pain ou tomates dans ce marché pour constituer ton stock."
+    business_tip.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    column.add_child(business_tip)
     market_message_label = Label.new()
     market_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     column.add_child(market_message_label)
@@ -1838,6 +1858,7 @@ func _open_market() -> void:
         player.set_physics_process(false)
     _on_economy_updated(economy_manager.get_balance(), economy_manager.inventory, "Tala biloko oyo ezali na zando.")
     _refresh_work_progress_label()
+    _refresh_business_status()
 
 func _close_market() -> void:
     market_panel.visible = false
@@ -1851,6 +1872,20 @@ func _buy_market_item(item_id: String) -> void:
 func _sell_market_item(item_id: String) -> void:
     if _ensure_economy_manager():
         economy_manager.sell(item_id)
+
+func _buy_player_business() -> void:
+    if _ensure_economy_manager():
+        economy_manager.buy_player_business()
+        _refresh_business_status()
+
+func _operate_player_business() -> void:
+    if _ensure_economy_manager():
+        economy_manager.operate_player_business()
+        _refresh_business_status()
+
+func _refresh_business_status() -> void:
+    if is_instance_valid(business_status_label) and _ensure_economy_manager():
+        business_status_label.text = economy_manager.get_player_business_status()
 
 func _do_market_job() -> void:
     if _ensure_economy_manager():
@@ -1872,6 +1907,7 @@ func _on_economy_updated(balance: int, inventory: Dictionary, message: String) -
         market_inventory_label.text = "Biloko: Eau %d | Pain %d | Tomates %d | Carburant %d" % [int(inventory.get("eau", 0)), int(inventory.get("pain", 0)), int(inventory.get("tomates", 0)), int(inventory.get("carburant", 0))]
     if is_instance_valid(market_message_label):
         market_message_label.text = message
+    _refresh_business_status()
 
 func _format_fc(amount: int) -> String:
     var raw := str(amount)
