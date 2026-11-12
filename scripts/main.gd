@@ -5,6 +5,7 @@ const MISSION_MANAGER_SCRIPT = preload("res://scripts/mission_manager.gd")
 const DIALOGUE_MANAGER_SCRIPT = preload("res://scripts/dialogue_manager.gd")
 const ECONOMY_MANAGER_SCRIPT = preload("res://scripts/economy_manager.gd")
 const NEEDS_MANAGER_SCRIPT = preload("res://scripts/needs_manager.gd")
+const REPUTATION_MANAGER_SCRIPT = preload("res://scripts/reputation_manager.gd")
 const VEHICLE_CONTROLLER_SCRIPT = preload("res://scripts/vehicle_controller.gd")
 const MOBONDO_EMBLEM_SCRIPT = preload("res://scripts/mobondo_emblem.gd")
 const SAVE_PATH := "user://mobondo_save.json"
@@ -15,6 +16,8 @@ var mission_manager
 var dialogue_manager
 var economy_manager
 var needs_manager
+var reputation_manager
+var reputation_label: Label
 var vehicle
 var vehicle_label: Label
 var vehicle_occupied := false
@@ -104,6 +107,9 @@ func _ready() -> void:
     needs_manager = NEEDS_MANAGER_SCRIPT.new()
     needs_manager.needs_updated.connect(_on_needs_updated)
     add_child(needs_manager)
+    reputation_manager = REPUTATION_MANAGER_SCRIPT.new()
+    reputation_manager.reputation_updated.connect(_on_reputation_updated)
+    add_child(reputation_manager)
     _load_world_state()
     if is_instance_valid(continue_button):
         continue_button.visible = has_saved_world
@@ -1158,6 +1164,8 @@ func _skip_game_time(minutes: float, advance_needs: bool = true) -> void:
         return
     if advance_needs and is_instance_valid(needs_manager):
         needs_manager.advance(minutes)
+    if is_instance_valid(reputation_manager):
+        reputation_manager.advance_game_minutes(minutes)
     var total_minutes := world_minutes + minutes
     var crossed_days := int(floor(total_minutes / 1440.0))
     world_minutes = fposmod(total_minutes, 1440.0)
@@ -1173,6 +1181,8 @@ func _update_world_clock(delta: float) -> void:
     world_minutes = fposmod(world_minutes + delta, 1440.0)
     if is_instance_valid(needs_manager) and not menu_active:
         needs_manager.advance(delta)
+    if is_instance_valid(reputation_manager) and not menu_active:
+        reputation_manager.advance_game_minutes(delta)
     if world_minutes < previous_minutes and is_instance_valid(economy_manager):
         economy_manager.reset_daily()
     var hour := int(world_minutes / 60.0)
@@ -1265,6 +1275,11 @@ func _setup_ui() -> void:
     column.add_child(mission_label)
     status_label = Label.new()
     column.add_child(status_label)
+    reputation_label = Label.new()
+    reputation_label.text = "RÉPUTATION 10/100 | POLICE 0/100 | ALERTE 0/5"
+    reputation_label.add_theme_color_override("font_color", Color(0.95, 0.68, 0.42))
+    reputation_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    column.add_child(reputation_label)
     world_clock_label = Label.new()
     world_clock_label.text = "07:00 — Mokolo ya sika"
     world_clock_label.add_theme_color_override("font_color", Color(0.9, 0.72, 0.42))
@@ -2305,6 +2320,12 @@ func _on_mission_failed(reason: String) -> void:
 
 func _on_mission_message(message: String) -> void:
     status_label.text = message
+
+func _on_reputation_updated(reputation: int, police_heat: int, wanted_level: int, message: String) -> void:
+    if is_instance_valid(reputation_label) and is_instance_valid(reputation_manager):
+        reputation_label.text = reputation_manager.get_status_text() + " — " + reputation_manager.get_reputation_title()
+    if is_instance_valid(status_label):
+        status_label.text = message
 
 func _update_status() -> void:
     if not is_instance_valid(mission_manager):
