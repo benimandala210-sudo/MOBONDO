@@ -1618,6 +1618,9 @@ func _mount_vehicle() -> void:
     player.set_physics_process(false)
     player.visible = false
     player.velocity = Vector3.ZERO
+    var player_collision := player.get_node_or_null("CollisionShape3D") as CollisionShape3D
+    if is_instance_valid(player_collision):
+        player_collision.set_deferred("disabled", true)
     vehicle.mount()
     vehicle_label.visible = true
     run_button.text = "GAZ"
@@ -1632,6 +1635,9 @@ func _dismount_vehicle() -> void:
     player.global_position = vehicle.global_position + vehicle.global_basis.x * 1.35 + Vector3(0, 0.15, 0)
     player.visible = true
     player.set_physics_process(true)
+    var player_collision := player.get_node_or_null("CollisionShape3D") as CollisionShape3D
+    if is_instance_valid(player_collision):
+        player_collision.set_deferred("disabled", false)
     vehicle_label.visible = false
     run_button.text = "KIMA"
     action_button.text = "SALA"
