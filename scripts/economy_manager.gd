@@ -6,7 +6,8 @@ const SAVE_PATH := "user://mobondo_economy.json"
 const ITEMS := {
     "eau": {"name": "Eau", "price": 1000, "sell": 700},
     "pain": {"name": "Pain", "price": 1500, "sell": 1000},
-    "tomates": {"name": "Tomates", "price": 2000, "sell": 1400}
+    "tomates": {"name": "Tomates", "price": 2000, "sell": 1400},
+    "carburant": {"name": "Carburant", "price": 3000, "sell": 2000}
 }
 var balance: int = 10000
 var inventory: Dictionary = {}
