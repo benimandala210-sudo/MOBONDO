@@ -794,9 +794,11 @@ func _animate_street_life(delta: float) -> void:
                 person.set_meta("activity", "standing")
 
 
-func _skip_game_time(minutes: float) -> void:
+func _skip_game_time(minutes: float, advance_needs: bool = true) -> void:
     if minutes <= 0.0:
         return
+    if advance_needs and is_instance_valid(needs_manager):
+        needs_manager.advance(minutes)
     var total_minutes := world_minutes + minutes
     var crossed_days := int(floor(total_minutes / 1440.0))
     world_minutes = fposmod(total_minutes, 1440.0)
@@ -1325,7 +1327,7 @@ func _rest_player() -> void:
 
 func _sleep_player() -> void:
     var minutes_slept := needs_manager.sleep(8.0)
-    _skip_game_time(minutes_slept)
+    _skip_game_time(minutes_slept, false)
     needs_message_label.text = "Olali ngonga 8. Mokolo ya sika ebandi."
     _save_world_state()
 
