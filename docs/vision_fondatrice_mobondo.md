@@ -6,9 +6,9 @@ Ce document est la boussole de conception de MOBONDO. Chaque fonctionnalité, ch
 
 ## 1. Le jeu que nous construisons
 
-MOBONDO est un jeu vidéo de simulation de vie en monde ouvert, ancré dans la réalité quotidienne de Kinshasa, en République démocratique du Congo. Le joueur incarne un adulte qui commence sa propre vie à Mapela–Raïs, dans la commune de Masina.
+MOBONDO est un jeu vidéo de simulation de vie en monde ouvert, ancré dans la réalité quotidienne de Kinshasa, en République démocratique du Congo. Le joueur incarne au départ un jeune kuluna de Mapela–Raïs, dans la commune de Masina : un jeune homme dont la réputation peut inspirer la crainte, provoquer le respect, attirer des rivaux et attirer l'attention de la police. Cette identité de départ est centrale dans le scénario et le gameplay.
 
-Ce n'est ni un simple jeu de commerce, ni un jeu de missions successives, ni un simulateur de criminalité. C'est un monde dans lequel le joueur construit librement sa propre histoire.
+MOBONDO est une simulation de vie urbaine en monde ouvert qui assume les conflits, les actes illégaux et leurs conséquences. Le joueur peut provoquer des scandales, se battre, intimider, voler des voitures ou des motos, fuir la police, être arrêté, être blessé ou mourir. Ces possibilités ne doivent toutefois pas transformer le jeu en parcours criminel obligatoire : le joueur garde la liberté de poursuivre cette vie, de changer de comportement ou de reconstruire sa réputation.
 
 ## 2. Liberté du joueur
 
@@ -21,7 +21,7 @@ Le joueur doit pouvoir choisir ses priorités et changer de direction à tout mo
 - participer à la vie du quartier, se divertir, faire du sport, se reposer ;
 - poursuivre ses ambitions personnelles, explorer et simplement vivre son quotidien.
 
-Les missions et activités sont des possibilités, jamais une obligation permanente. Le mode libre doit rester réellement libre. La criminalité ne doit jamais être présentée comme le cœur ou la voie obligatoire du jeu.
+Les missions et activités sont des possibilités, jamais une obligation permanente. Le mode libre doit rester réellement libre. La criminalité et la réputation de kuluna sont au cœur de l'identité initiale du personnage, mais elles ne doivent pas enfermer le joueur dans une seule trajectoire.
 
 ## 3. Un monde vivant et crédible
 
@@ -31,7 +31,10 @@ Le quartier ne doit pas être un décor vide. Il doit évoluer et réagir :
 - commerces, marchés, services publics, écoles, lieux de culte, espaces de sport et lieux de rencontre ;
 - alternance jour/nuit, météo et rythme des activités ;
 - économie locale avec emplois, revenus, dépenses, prix, stocks, clients et entreprises ;
-- conséquences lisibles des décisions du joueur sur sa situation et ses relations.
+- conséquences lisibles des décisions du joueur sur sa situation et ses relations ;
+- réputation de quartier, peur, respect, rivalités, témoins et mémoire des incidents ;
+- police avec patrouilles, suspicion, poursuites, arrestations, détention et retour dans le quartier ;
+- conséquences des affrontements : blessures, perte de ressources, représailles, réputation et risque de mort.
 
 La priorité est la cohérence et la profondeur des systèmes, pas l'accumulation de boutons ou de fonctionnalités artificielles.
 
@@ -68,7 +71,21 @@ Les étapes peuvent se chevaucher, mais chaque bloc doit renforcer le monde comm
 
 Le système économique en cours n'est donc qu'un pilier parmi d'autres. Il doit s'intégrer à la vie des habitants, aux besoins du joueur, aux déplacements et à l'évolution du quartier.
 
-## 7. Questions obligatoires avant toute nouvelle fonctionnalité
+## 7. Personnage principal, réputation et police
+
+Le personnage commence comme un jeune kuluna connu dans son environnement. Sa réputation doit influencer les réactions des habitants, les comportements des rivaux, les opportunités et les risques.
+
+Les systèmes à construire sont :
+- **Crainte et réputation de rue :** notoriété, respect ou peur, rumeurs, réactions des habitants et rivalités.
+- **Attention policière :** surveillance liée à la gravité et à la répétition des incidents, aux témoins, au lieu et à l'heure.
+- **Historique des incidents :** scandales, intimidations, affrontements, agressions et vols de véhicules.
+- **Conséquences :** poursuites, arrestation, interrogatoire, détention, amende ou perte de biens, blessures et risque de mort.
+
+La police doit fonctionner comme un système cohérent : repérer un incident, poursuivre le joueur, éventuellement le perdre de vue, procéder à une arrestation et gérer une période de détention. Les habitants doivent réagir de façons différentes : peur, résistance, dénonciation, soutien ou vengeance. Les actes peuvent procurer un avantage immédiat, mais créent des risques crédibles.
+
+La mort du personnage doit être une conséquence rare mais réelle, pensée avec la sauvegarde et la continuité de partie. Elle ne doit jamais être déclenchée par le seul niveau de réputation.
+
+## 8. Questions obligatoires avant toute nouvelle fonctionnalité
 
 Avant d'ajouter un système, vérifier :
 - Est-ce que cela enrichit la simulation de vie à Kinshasa ?
