@@ -1562,6 +1562,8 @@ func _perform_action() -> void:
     if is_instance_valid(vehicle) and player.global_position.distance_to(vehicle.global_position) <= 3.8:
         _mount_vehicle()
         return
+    if _try_use_nearby_service():
+        return
     if selected_mode == "libre":
         status_label.text = "Ozali na bomoi ya bonsomi. Pusana pene ya moto mpo na kosolola."
         return
@@ -1598,6 +1600,10 @@ func _update_nearby_npc_hint() -> void:
     if is_instance_valid(vehicle) and player.global_position.distance_to(vehicle.global_position) <= 3.8:
         action_button.text = "MONTER SUR LA MOTO"
         return
+    var nearby_service := _get_nearby_service()
+    if not nearby_service.is_empty():
+        action_button.text = str(nearby_service.get("prompt", "UTILISER"))
+        return
     var nearest_name := ""
     var nearest_distance := 3.6
     for person in pedestrian_nodes:
@@ -1609,6 +1615,56 @@ func _update_nearby_npc_hint() -> void:
             nearest_name = str(person.name)
     action_button.text = "PARLER — " + nearest_name if not nearest_name.is_empty() else "SALA"
 
+
+func _get_nearby_service() -> Dictionary:
+    if not is_instance_valid(player) or vehicle_occupied:
+        return {}
+    var services: Array[Dictionary] = [
+        {"id": "water", "name": "Point d'eau public", "prompt": "BOIRE À LA BORNE", "position": Vector3(5.5, 0.0, -39.0), "range": 4.2},
+        {"id": "clinic", "name": "Centre de santé", "prompt": "CENTRE DE SANTÉ", "position": Vector3(22.0, 0.0, -36.0), "range": 5.0},
+        {"id": "football", "name": "Terrain de football", "prompt": "JOUER AU FOOT", "position": Vector3(0.0, 0.0, -57.0), "range": 7.0},
+        {"id": "church", "name": "Salle de prière", "prompt": "PRENDRE UN TEMPS DE CALME", "position": Vector3(22.0, 0.0, -8.0), "range": 5.0}
+    ]
+    var closest: Dictionary = {}
+    var closest_distance := 9999.0
+    for service in services:
+        var distance: float = player.global_position.distance_to(service["position"])
+        if distance <= float(service["range"]) and distance < closest_distance:
+            closest = service
+            closest_distance = distance
+    return closest
+
+func _try_use_nearby_service() -> bool:
+    var service := _get_nearby_service()
+    if service.is_empty():
+        return false
+    match str(service.get("id", "")):
+        "water":
+            needs_manager.drink()
+            _skip_game_time(3.0)
+            status_label.text = "Omelí mayi na borne publique. Mayi na nzoto ezongi."
+            _save_world_state()
+        "clinic":
+            if economy_manager.charge(5000, "soins au centre de santé"):
+                needs_manager.receive_treatment(40.0)
+                _skip_game_time(20.0)
+                status_label.text = "Bozwi lisalisi na centre de santé. Santé ezongi."
+                _save_world_state()
+            else:
+                status_label.text = "Mbongo ekoki te mpo na kozwa soins: 5 000 FC."
+        "football":
+            needs_manager.exercise()
+            _skip_game_time(25.0)
+            status_label.text = "Osani ndembo na terrain. Nzoto esali exercice."
+            _save_world_state()
+        "church":
+            needs_manager.meditate()
+            _skip_game_time(10.0)
+            status_label.text = "Ozwaki mwa kimia mpe ntango ya komanyola."
+            _save_world_state()
+        _:
+            return false
+    return true
 
 func _mount_vehicle() -> void:
     if not is_instance_valid(vehicle) or vehicle.get_fuel() <= 0.0:
