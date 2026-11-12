@@ -85,7 +85,19 @@ La police doit fonctionner comme un système cohérent : repérer un incident, p
 
 La mort du personnage doit être une conséquence rare mais réelle, pensée avec la sauvegarde et la continuité de partie. Elle ne doit jamais être déclenchée par le seul niveau de réputation.
 
-## 8. Questions obligatoires avant toute nouvelle fonctionnalité
+## 8. Règles des missions et des épisodes
+
+Les missions scénarisées sont organisées en épisodes qui se débloquent dans l'ordre. Le joueur doit accomplir l'objectif principal d'un épisode pour débloquer le suivant. Une mission prend fin immédiatement dès que l'une des trois conditions terminales suivantes survient :
+
+1. **Objectif principal accompli — victoire :** la mission se termine, une cinématique de victoire présente la conclusion et le bilan, puis l'épisode suivant est débloqué.
+2. **Joueur arrêté par la police — échec :** la mission s'arrête immédiatement. Une cinématique de défaite est jouée, puis le joueur recommence l'épisode échoué.
+3. **Joueur tué — échec :** la mission s'arrête immédiatement. Une cinématique de défaite est jouée, puis l'épisode recommence depuis l'état sauvegardé au début de cet épisode.
+
+Les objectifs secondaires sont facultatifs : les manquer ne transforme pas une victoire principale en échec et ne bloque pas le déblocage de l'épisode suivant ; cela réduit seulement la récompense obtenue. Chaque issue, victoire comme défaite, doit avoir une conclusion cinématographique et un bilan cohérent. Une arrestation ou la mort du personnage ne permet jamais de poursuivre la mission en cours.
+
+Les missions peuvent être jouées en solo ou en équipe lorsque le scénario le prévoit. Ces épisodes scénarisés doivent coexister avec le mode libre : ils ne doivent pas supprimer la liberté du joueur dans le monde ouvert.
+
+## 9. Questions obligatoires avant toute nouvelle fonctionnalité
 
 Avant d'ajouter un système, vérifier :
 - Est-ce que cela enrichit la simulation de vie à Kinshasa ?
