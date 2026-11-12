@@ -76,11 +76,7 @@ var saved_player_position := Vector3(0, 1, 0)
 func _ready() -> void:
     _setup_world()
     _setup_player()
-    # The market UI reads economy progress while it is being constructed.
-    # Initialize the economy before building any UI panels.
-    economy_manager = ECONOMY_MANAGER_SCRIPT.new()
-    economy_manager.economy_updated.connect(_on_economy_updated)
-    add_child(economy_manager)
+    _ensure_economy_manager()
     _setup_ui()
     _setup_main_menu()
     mission_manager = MISSION_MANAGER_SCRIPT.new()
@@ -102,6 +98,25 @@ func _ready() -> void:
     if is_instance_valid(continue_button):
         continue_button.visible = has_saved_world
     _refresh_mission()
+    _refresh_work_progress_label()
+
+func _ensure_economy_manager() -> bool:
+    if is_instance_valid(economy_manager):
+        return true
+    economy_manager = ECONOMY_MANAGER_SCRIPT.new()
+    if not is_instance_valid(economy_manager):
+        push_error("MOBONDO: impossible d'initialiser EconomyManager.")
+        return false
+    economy_manager.economy_updated.connect(_on_economy_updated)
+    add_child(economy_manager)
+    return true
+
+func _refresh_work_progress_label() -> void:
+    if not is_instance_valid(economy_manager) or not is_instance_valid(market_panel):
+        return
+    var progress_label := market_panel.find_child("WorkProgressLabel", true, false)
+    if progress_label is Label:
+        progress_label.text = economy_manager.get_work_progress_text()
 
 func _process(delta: float) -> void:
     menu_time += delta
@@ -1449,7 +1464,7 @@ func _setup_market_ui(layer: CanvasLayer) -> void:
     column.add_child(delivery_button)
     var work_progress_label := Label.new()
     work_progress_label.name = "WorkProgressLabel"
-    work_progress_label.text = economy_manager.get_work_progress_text()
+    work_progress_label.text = "Progression du travail : chargement..."
     column.add_child(work_progress_label)
     market_message_label = Label.new()
     market_message_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -1460,6 +1475,8 @@ func _setup_market_ui(layer: CanvasLayer) -> void:
     column.add_child(close_button)
 
 func _open_market() -> void:
+    if not _ensure_economy_manager():
+        return
     if is_instance_valid(dialogue_manager) and not dialogue_manager.active_character_id.is_empty():
         dialogue_manager.close_dialogue()
     dialogue_panel.visible = false
@@ -1467,6 +1484,7 @@ func _open_market() -> void:
     if is_instance_valid(player):
         player.set_physics_process(false)
     _on_economy_updated(economy_manager.get_balance(), economy_manager.inventory, "Tala biloko oyo ezali na zando.")
+    _refresh_work_progress_label()
 
 func _close_market() -> void:
     market_panel.visible = false
@@ -1474,19 +1492,23 @@ func _close_market() -> void:
         player.set_physics_process(true)
 
 func _buy_market_item(item_id: String) -> void:
-    economy_manager.buy(item_id)
+    if _ensure_economy_manager():
+        economy_manager.buy(item_id)
 
 func _sell_market_item(item_id: String) -> void:
-    economy_manager.sell(item_id)
+    if _ensure_economy_manager():
+        economy_manager.sell(item_id)
 
 func _do_market_job() -> void:
-    economy_manager.do_market_job()
+    if _ensure_economy_manager():
+        economy_manager.do_market_job()
+        _refresh_work_progress_label()
 
 func _do_job(job_id: String) -> void:
+    if not _ensure_economy_manager():
+        return
     economy_manager.do_job(job_id)
-    var progress_label := market_panel.find_child("WorkProgressLabel", true, false)
-    if progress_label is Label:
-        progress_label.text = economy_manager.get_work_progress_text()
+    _refresh_work_progress_label()
 
 func _on_economy_updated(balance: int, inventory: Dictionary, message: String) -> void:
     if is_instance_valid(wallet_label):
