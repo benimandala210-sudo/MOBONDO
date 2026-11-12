@@ -1,6 +1,7 @@
 extends Node3D
 
 const PLAYER_SCRIPT = preload("res://scripts/player.gd")
+const PLAYER_VISUAL_SCRIPT = preload("res://scripts/player_visual.gd")
 const MISSION_MANAGER_SCRIPT = preload("res://scripts/mission_manager.gd")
 const DIALOGUE_MANAGER_SCRIPT = preload("res://scripts/dialogue_manager.gd")
 const ECONOMY_MANAGER_SCRIPT = preload("res://scripts/economy_manager.gd")
@@ -106,8 +107,6 @@ func _unhandled_input(event: InputEvent) -> void:
             _perform_action()
 
 func _setup_world() -> void:
-    # Démarrage minimal et léger : on valide d'abord l'affichage sur Android.
-    # Les éléments détaillés du quartier seront réactivés progressivement après test.
     var environment := WorldEnvironment.new()
     var env := Environment.new()
     env.background_mode = Environment.BG_SKY
@@ -115,6 +114,7 @@ func _setup_world() -> void:
     env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
     env.ambient_light_color = Color(0.72, 0.78, 0.9)
     env.ambient_light_energy = 0.8
+    env.tonemap_mode = Environment.TONE_MAPPER_FILMIC
     environment.environment = env
     add_child(environment)
 
@@ -125,8 +125,19 @@ func _setup_world() -> void:
     sunlight.shadow_enabled = false
     add_child(sunlight)
 
-    _add_box("Sol provisoire", Vector3(0, -0.55, -15), Vector3(70, 1, 80), Color(0.22, 0.42, 0.24))
-    _add_box("Route provisoire", Vector3(0, -0.02, -15), Vector3(9, 0.12, 80), Color(0.18, 0.18, 0.2))
+    # Construction complète du premier secteur jouable Mapela–Raïs.
+    _add_box("Terrain Mapela", Vector3(0, -0.55, -15), Vector3(70, 1, 80), Color(0.22, 0.42, 0.24))
+    _add_box("Avenue Bilonda", Vector3(0, -0.02, -15), Vector3(9, 0.12, 80), Color(0.25, 0.23, 0.22))
+    _create_roadside_environment()
+    _create_road_markings_and_lights()
+    _create_mapela_road_network()
+    _create_mapela_houses()
+    _create_market_detail()
+    _create_mapela_landmarks()
+    _create_masina_local_areas()
+    _create_rais_railway_remains()
+    _create_mapela_street_directory()
+    _create_pedestrians()
     _create_menu_taxi()
 
 
@@ -673,14 +684,10 @@ func _setup_player() -> void:
     player.set_physics_process(false)
     add_child(player)
 
-    var body := MeshInstance3D.new()
-    var capsule := CapsuleMesh.new()
-    capsule.radius = 0.42
-    capsule.height = 1.8
-    body.mesh = capsule
-    body.position.y = 0.9
-    body.material_override = _material(Color(0.12, 0.3, 0.72))
-    player.add_child(body)
+    var visual := Node3D.new()
+    visual.name = "ModeleHumain"
+    visual.set_script(PLAYER_VISUAL_SCRIPT)
+    player.add_child(visual)
 
     var collision := CollisionShape3D.new()
     var shape := CapsuleShape3D.new()
