@@ -30,6 +30,16 @@ func buy(item_id: String) -> bool:
     _emit_update("Osombi %s. -%d FC." % [str(item["name"]), price])
     return true
 
+func use_item(item_id: String) -> bool:
+    if not ITEMS.has(item_id) or int(inventory.get(item_id, 0)) <= 0:
+        _emit_update("Ozali na eloko yango te. Kende kosomba yango na zando.")
+        return false
+    inventory[item_id] = int(inventory.get(item_id, 0)) - 1
+    _save_state()
+    var item: Dictionary = ITEMS[item_id]
+    _emit_update("Osaleli %s." % str(item["name"]))
+    return true
+
 func sell(item_id: String) -> bool:
     if not ITEMS.has(item_id) or int(inventory.get(item_id, 0)) <= 0:
         _emit_update("Ozali na biloko yango te mpo na koteka.")
