@@ -64,6 +64,8 @@ var street_moto: Node3D
 var world_minutes := 7.0 * 60.0
 var routine_refresh_timer := 0.0
 var sunlight: DirectionalLight3D
+var world_environment: WorldEnvironment
+var world_sky_material: ProceduralSkyMaterial
 var world_clock_label: Label
 var camera_yaw := 0.0
 var camera_pitch := 0.22
@@ -268,6 +270,8 @@ func _setup_world() -> void:
     env.fog_density = 0.0018
     env.fog_sun_scatter = 0.12
     environment.environment = env
+    world_environment = environment
+    world_sky_material = sky_material
     add_child(environment)
 
     sunlight = DirectionalLight3D.new()
@@ -861,11 +865,22 @@ func _update_world_clock(delta: float) -> void:
         routine_refresh_timer = 0.0
         _apply_npc_routines(hour)
 
+    var daylight := clampf((sin((world_minutes / 1440.0) * TAU - PI / 2.0) + 0.18) * 1.35, 0.12, 1.0)
     if is_instance_valid(sunlight):
-        var daylight := clampf((sin((world_minutes / 1440.0) * TAU - PI / 2.0) + 0.18) * 1.35, 0.12, 1.0)
-        sunlight.light_energy = 0.22 + daylight * 0.95
+        sunlight.light_energy = 0.12 + daylight * 1.05
         sunlight.rotation_degrees.x = -10.0 - daylight * 48.0
-        sunlight.light_color = Color(1.0, 0.66 + daylight * 0.18, 0.42 + daylight * 0.18)
+        sunlight.light_color = Color(1.0, 0.58 + daylight * 0.24, 0.34 + daylight * 0.24)
+    if is_instance_valid(world_sky_material):
+        var night_top := Color(0.012, 0.022, 0.065)
+        var day_top := Color(0.12, 0.32, 0.58)
+        var night_horizon := Color(0.055, 0.075, 0.13)
+        var day_horizon := Color(0.72, 0.78, 0.82)
+        world_sky_material.sky_top_color = night_top.lerp(day_top, daylight)
+        world_sky_material.sky_horizon_color = night_horizon.lerp(day_horizon, daylight)
+        world_sky_material.ground_horizon_color = Color(0.12, 0.14, 0.12).lerp(Color(0.58, 0.55, 0.46), daylight)
+    if is_instance_valid(world_environment) and world_environment.environment != null:
+        world_environment.environment.ambient_light_energy = 0.22 + daylight * 0.58
+        world_environment.environment.fog_light_color = Color(0.07, 0.09, 0.15).lerp(Color(0.67, 0.72, 0.72), daylight)
 
 func _apply_npc_routines(hour: int) -> void:
     for person in pedestrian_nodes:
