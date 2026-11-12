@@ -40,6 +40,17 @@ func buy(item_id: String) -> bool:
     _emit_update("Osombi %s. -%d FC." % [str(item["name"]), price])
     return true
 
+func charge(amount: int, reason: String) -> bool:
+    if amount <= 0:
+        return false
+    if balance < amount:
+        _emit_update("Mbongo ekoki te mpo na kofuta %s." % reason)
+        return false
+    balance -= amount
+    _save_state()
+    _emit_update("Ofuti %s: -%s FC." % [reason, _format_amount(amount)])
+    return true
+
 func use_item(item_id: String) -> bool:
     if not ITEMS.has(item_id) or int(inventory.get(item_id, 0)) <= 0:
         _emit_update("Ozali na eloko yango te. Kende kosomba yango na zando.")
