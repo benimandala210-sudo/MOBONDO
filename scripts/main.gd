@@ -64,6 +64,7 @@ var street_moto: Node3D
 var traffic_vehicles: Array[Node3D] = []
 var traffic_base_speeds: Array[float] = []
 var traffic_directions: Array[float] = []
+var traffic_current_speeds: Array[float] = []
 var world_minutes := 7.0 * 60.0
 var routine_refresh_timer := 0.0
 var sunlight: DirectionalLight3D
@@ -972,6 +973,7 @@ func _setup_traffic() -> void:
     traffic_vehicles.clear()
     traffic_base_speeds.clear()
     traffic_directions.clear()
+    traffic_current_speeds.clear()
 
     if is_instance_valid(menu_taxi):
         _register_traffic_vehicle(menu_taxi, -1.65, -8.0, -1.0, 5.2, "Taxi jaune — circulation")
@@ -997,6 +999,7 @@ func _register_traffic_vehicle(vehicle: Node3D, lane_x: float, start_z: float, d
     traffic_vehicles.append(vehicle)
     traffic_base_speeds.append(speed)
     traffic_directions.append(direction)
+    traffic_current_speeds.append(0.0)
 
 func _update_traffic(delta: float) -> void:
     if traffic_vehicles.is_empty():
@@ -1013,11 +1016,48 @@ func _update_traffic(delta: float) -> void:
 
         vehicle.visible = traffic_active
         if not traffic_active:
+            traffic_current_speeds[i] = move_toward(traffic_current_speeds[i], 0.0, 3.0 * delta)
             continue
 
         var direction := traffic_directions[i]
-        var speed := traffic_base_speeds[i] * daylight_factor
-        vehicle.position.z += direction * speed * delta
+        var target_speed := traffic_base_speeds[i] * daylight_factor
+
+        # Distance de sécurité : un véhicule ne rattrape pas celui qui le précède.
+        for j in range(traffic_vehicles.size()):
+            if i == j:
+                continue
+            var other := traffic_vehicles[j]
+            if not is_instance_valid(other) or not other.visible:
+                continue
+            if absf(other.position.x - vehicle.position.x) > 0.8:
+                continue
+            if absf(traffic_directions[j] - direction) > 0.1:
+                continue
+            var gap := (other.position.z - vehicle.position.z) * direction
+            if gap > 0.0 and gap < 10.0:
+                var following_factor := clampf((gap - 3.0) / 7.0, 0.0, 1.0)
+                target_speed = minf(target_speed, traffic_base_speeds[i] * following_factor)
+
+        # Priorité aux piétons : ralentissement puis arrêt s'ils traversent devant le véhicule.
+        for person in pedestrian_nodes:
+            if not is_instance_valid(person) or not person.visible:
+                continue
+            var lateral_distance := absf(person.position.x - vehicle.position.x)
+            var forward_distance := (person.position.z - vehicle.position.z) * direction
+            if lateral_distance < 2.4 and forward_distance > 0.0 and forward_distance < 5.0:
+                target_speed = 0.0
+                break
+
+        # Le joueur à pied est également protégé lorsqu'il se trouve sur la chaussée.
+        if is_instance_valid(player) and player.visible and not vehicle_occupied:
+            var player_lateral := absf(player.global_position.x - vehicle.position.x)
+            var player_forward := (player.global_position.z - vehicle.position.z) * direction
+            if player_lateral < 2.1 and player_forward > 0.0 and player_forward < 5.0:
+                target_speed = 0.0
+
+        traffic_current_speeds[i] = move_toward(traffic_current_speeds[i], target_speed, 3.2 * delta)
+        var actual_speed := traffic_current_speeds[i]
+        vehicle.position.z += direction * actual_speed * delta
 
         if direction < 0.0 and vehicle.position.z < -59.0:
             vehicle.position.z = 25.0
@@ -1025,7 +1065,8 @@ func _update_traffic(delta: float) -> void:
             vehicle.position.z = -59.0
 
         vehicle.rotation.y = PI if direction > 0.0 else 0.0
-        vehicle.set_meta("traffic_speed", speed)
+        vehicle.set_meta("traffic_speed", actual_speed)
+        vehicle.set_meta("traffic_state", "ralentit" if actual_speed < target_speed * 0.8 else "circule")
 
 func _animate_street_life(delta: float) -> void:
     _update_traffic(delta)
