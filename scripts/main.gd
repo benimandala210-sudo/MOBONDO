@@ -167,9 +167,9 @@ func _save_world_state() -> void:
     var data := {
         "version": 1,
         "player_position": {
-            "x": (vehicle.global_position.x if vehicle_occupied else player.global_position.x),
-            "y": (vehicle.global_position.y + 0.9 if vehicle_occupied else player.global_position.y),
-            "z": (vehicle.global_position.z if vehicle_occupied else player.global_position.z)
+            "x": (vehicle.global_position.x + vehicle.global_basis.x.x * 1.35 if vehicle_occupied else player.global_position.x),
+            "y": (vehicle.global_position.y + 0.15 if vehicle_occupied else player.global_position.y),
+            "z": (vehicle.global_position.z + vehicle.global_basis.x.z * 1.35 if vehicle_occupied else player.global_position.z)
         },
         "vehicle_position": {
             "x": vehicle.global_position.x,
@@ -1296,10 +1296,16 @@ func _toggle_needs_panel() -> void:
     if not is_instance_valid(needs_panel):
         return
     needs_panel.visible = not needs_panel.visible
-    if needs_panel.visible and is_instance_valid(player):
-        player.set_physics_process(false)
-    elif is_instance_valid(player) and not dialogue_panel.visible and not market_panel.visible:
-        player.set_physics_process(true)
+    if needs_panel.visible:
+        if is_instance_valid(player):
+            player.set_physics_process(false)
+        if vehicle_occupied and is_instance_valid(vehicle):
+            vehicle.set_physics_process(false)
+    else:
+        if vehicle_occupied and is_instance_valid(vehicle):
+            vehicle.set_physics_process(true)
+        elif is_instance_valid(player) and not dialogue_panel.visible and not market_panel.visible:
+            player.set_physics_process(true)
 
 func _use_water() -> void:
     if economy_manager.use_item("eau"):
