@@ -89,7 +89,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
     menu_time += delta
-    _animate_street_life()
+    _animate_street_life(delta)
     _update_world_clock(delta)
     if is_instance_valid(camera):
         if menu_active:
@@ -685,21 +685,30 @@ func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color
         var leg_mesh := CapsuleMesh.new()
         leg_mesh.radius = 0.105
         leg_mesh.height = 0.62
+        leg.name = "Jambe gauche" if side < 0.0 else "Jambe droite"
         leg.mesh = leg_mesh
         leg.position = Vector3(side * 0.13, 0.38, 0)
         leg.material_override = leg_material
         person.add_child(leg)
 
+    var leg_nodes: Array[MeshInstance3D] = []
+    for child in person.get_children():
+        if child is MeshInstance3D and child.name.begins_with("Jambe"):
+            leg_nodes.append(child)
+    person.set_meta("leg_nodes", leg_nodes)
     person.set_meta("walks", walks)
     person.set_meta("role", "passer" if person_name.begins_with("Passant") else "resident")
     person.set_meta("active_walks", walks)
     person.set_meta("phase", float(pedestrian_nodes.size()) * 1.7)
+    person.set_meta("walk_direction", 1.0)
+    person.set_meta("walk_limit", 2.2 if walks else 0.0)
+    person.set_meta("activity", "walking" if walks else "standing")
     pedestrian_nodes.append(person)
     pedestrian_origins.append(origin)
     pedestrian_speeds.append(speed)
     return person
 
-func _animate_street_life() -> void:
+func _animate_street_life(delta: float) -> void:
     if is_instance_valid(menu_taxi):
         menu_taxi.position.x = -4.8 + fposmod(menu_time * 1.35, 9.6)
     if is_instance_valid(street_moto):
@@ -709,15 +718,41 @@ func _animate_street_life() -> void:
         var person := pedestrian_nodes[i]
         if not is_instance_valid(person):
             continue
-        if bool(person.get_meta("walks", false)):
-            var phase: float = float(person.get_meta("phase", 0.0))
+        if bool(person.get_meta("walks", false)) and person.visible:
+            var direction := float(person.get_meta("walk_direction", 1.0))
+            var limit := float(person.get_meta("walk_limit", 2.2))
             var speed: float = pedestrian_speeds[i]
-            var origin: Vector3 = pedestrian_origins[i]
-            person.position.x = origin.x + sin(menu_time * speed + phase) * 1.15
-            person.position.y = abs(sin(menu_time * speed * 2.0 + phase)) * 0.035
-            person.rotation.y = 0.0 if cos(menu_time * speed + phase) >= 0.0 else PI
+            person.position.x += direction * speed * delta
+            var offset := person.position.x - pedestrian_origins[i].x
+            if offset >= limit:
+                person.position.x = pedestrian_origins[i].x + limit
+                person.set_meta("walk_direction", -1.0)
+                direction = -1.0
+            elif offset <= -limit:
+                person.position.x = pedestrian_origins[i].x - limit
+                person.set_meta("walk_direction", 1.0)
+                direction = 1.0
+            person.rotation.y = 0.0 if direction > 0.0 else PI
+            person.position.y = 0.0
+            var phase := menu_time * speed * 7.0 + float(person.get_meta("phase", 0.0))
+            var legs: Array = person.get_meta("leg_nodes", [])
+            for leg_index in range(legs.size()):
+                var leg = legs[leg_index]
+                if is_instance_valid(leg):
+                    leg.rotation.x = sin(phase + float(leg_index) * PI) * 0.38
+            person.set_meta("activity", "walking")
         else:
             person.position.y = abs(sin(menu_time * 1.8)) * 0.018
+            var legs: Array = person.get_meta("leg_nodes", [])
+            for leg in legs:
+                if is_instance_valid(leg):
+                    leg.rotation.x = 0.0
+            if str(person.get_meta("role", "")) == "seller":
+                person.set_meta("activity", "working")
+            elif str(person.get_meta("role", "")) == "customer":
+                person.set_meta("activity", "shopping")
+            else:
+                person.set_meta("activity", "standing")
 
 
 func _update_world_clock(delta: float) -> void:
