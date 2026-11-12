@@ -1186,7 +1186,10 @@ func _setup_dialogue_ui(layer: CanvasLayer) -> void:
 
 func _on_dialogue_updated(speaker: String, text: String, choices: Array) -> void:
     dialogue_panel.visible = true
-    dialogue_speaker_label.text = speaker
+    var relationship := 0
+    if is_instance_valid(dialogue_manager) and not dialogue_manager.active_character_id.is_empty():
+        relationship = dialogue_manager.get_relationship_score(dialogue_manager.active_character_id)
+    dialogue_speaker_label.text = speaker + "  •  Boyokani: " + str(relationship)
     dialogue_text_label.text = text
     for child in dialogue_choices.get_children():
         child.queue_free()
