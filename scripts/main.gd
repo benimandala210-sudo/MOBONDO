@@ -5,6 +5,7 @@ const MISSION_MANAGER_SCRIPT = preload("res://scripts/mission_manager.gd")
 const DIALOGUE_MANAGER_SCRIPT = preload("res://scripts/dialogue_manager.gd")
 const ECONOMY_MANAGER_SCRIPT = preload("res://scripts/economy_manager.gd")
 const NEEDS_MANAGER_SCRIPT = preload("res://scripts/needs_manager.gd")
+const VEHICLE_CONTROLLER_SCRIPT = preload("res://scripts/vehicle_controller.gd")
 const MOBONDO_EMBLEM_SCRIPT = preload("res://scripts/mobondo_emblem.gd")
 const SAVE_PATH := "user://mobondo_save.json"
 
@@ -14,6 +15,11 @@ var mission_manager
 var dialogue_manager
 var economy_manager
 var needs_manager
+var vehicle
+var vehicle_label: Label
+var vehicle_occupied := false
+var saved_vehicle_position := Vector3(2.5, 0.0, 2.5)
+var saved_vehicle_fuel := 100.0
 var needs_label: Label
 var needs_panel: PanelContainer
 var needs_message_label: Label
@@ -116,9 +122,10 @@ func _process(delta: float) -> void:
                 sin(camera_pitch),
                 cos(camera_yaw) * cos(camera_pitch)
             ) * camera_distance
-            var camera_target := player.global_position + Vector3(0, 1.8, 0) + orbit_offset
+            var follow_target: Vector3 = vehicle.global_position if vehicle_occupied and is_instance_valid(vehicle) else player.global_position
+            var camera_target := follow_target + Vector3(0, 1.8, 0) + orbit_offset
             camera.global_position = camera.global_position.lerp(camera_target, minf(delta * 7.0, 1.0))
-            var look_target := player.global_position + Vector3(0, 1.25, 0)
+            var look_target := follow_target + Vector3(0, 1.25, 0)
             camera.look_at(look_target, Vector3.UP)
     if not menu_active:
         _update_mobile_direction()
@@ -160,10 +167,16 @@ func _save_world_state() -> void:
     var data := {
         "version": 1,
         "player_position": {
-            "x": player.global_position.x,
-            "y": player.global_position.y,
-            "z": player.global_position.z
+            "x": (vehicle.global_position.x if vehicle_occupied else player.global_position.x),
+            "y": (vehicle.global_position.y + 0.9 if vehicle_occupied else player.global_position.y),
+            "z": (vehicle.global_position.z if vehicle_occupied else player.global_position.z)
         },
+        "vehicle_position": {
+            "x": vehicle.global_position.x,
+            "y": vehicle.global_position.y,
+            "z": vehicle.global_position.z
+        },
+        "vehicle_fuel": vehicle.get_fuel(),
         "world_minutes": world_minutes,
         "camera_yaw": camera_yaw,
         "camera_pitch": camera_pitch,
@@ -198,6 +211,16 @@ func _load_world_state() -> void:
     world_minutes = fposmod(float(parsed.get("world_minutes", world_minutes)), 1440.0)
     camera_yaw = float(parsed.get("camera_yaw", camera_yaw))
     camera_pitch = clampf(float(parsed.get("camera_pitch", camera_pitch)), -0.12, 0.62)
+    var vehicle_data = parsed.get("vehicle_position", {})
+    if vehicle_data is Dictionary and is_instance_valid(vehicle):
+        saved_vehicle_position = Vector3(
+            float(vehicle_data.get("x", saved_vehicle_position.x)),
+            maxf(0.0, float(vehicle_data.get("y", saved_vehicle_position.y))),
+            float(vehicle_data.get("z", saved_vehicle_position.z))
+        )
+        vehicle.global_position = saved_vehicle_position
+        saved_vehicle_fuel = clampf(float(parsed.get("vehicle_fuel", 100.0)), 0.0, 100.0)
+        vehicle.refuel(saved_vehicle_fuel - vehicle.get_fuel())
     var loaded_mode := str(parsed.get("selected_mode", "histoire"))
     if loaded_mode == "histoire" or loaded_mode == "libre":
         selected_mode = loaded_mode
@@ -845,6 +868,13 @@ func _setup_player() -> void:
     camera.position = Vector3(0, 5.6, 9.0)
     add_child(camera)
     player.set_movement_camera(camera)
+    vehicle = CharacterBody3D.new()
+    vehicle.name = "MotoJoueur"
+    vehicle.set_script(VEHICLE_CONTROLLER_SCRIPT)
+    vehicle.global_position = saved_vehicle_position
+    vehicle.set_physics_process(false)
+    vehicle.vehicle_state_changed.connect(_on_vehicle_state_changed)
+    add_child(vehicle)
 
 func _setup_ui() -> void:
     var layer := CanvasLayer.new()
@@ -875,6 +905,10 @@ func _setup_ui() -> void:
     needs_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     needs_label.add_theme_font_size_override("font_size", 12)
     column.add_child(needs_label)
+    vehicle_label = Label.new()
+    vehicle_label.text = "Moto : stationnée"
+    vehicle_label.visible = false
+    column.add_child(vehicle_label)
 
     var controls := HBoxContainer.new()
     controls.anchor_left = 0.0
@@ -901,8 +935,8 @@ func _setup_ui() -> void:
     run_button = Button.new()
     run_button.text = "KIMA"
     run_button.custom_minimum_size = Vector2(100, 56)
-    run_button.button_down.connect(func(): player.set_running(true))
-    run_button.button_up.connect(func(): player.set_running(false))
+    run_button.button_down.connect(_set_run_control.bind(true))
+    run_button.button_up.connect(_set_run_control.bind(false))
     controls.add_child(run_button)
 
     var jump_button := Button.new()
@@ -1167,6 +1201,15 @@ func _play_start_transition() -> void:
         player.velocity = Vector3.ZERO
         player.visible = true
         player.set_physics_process(false)
+    if is_instance_valid(vehicle):
+        vehicle.global_position = saved_vehicle_position
+        vehicle.dismount()
+        vehicle_occupied = false
+        vehicle.visible = true
+        if is_instance_valid(vehicle_label):
+            vehicle_label.visible = false
+        if is_instance_valid(action_button):
+            action_button.text = "SALA"
 
     camera_yaw = 0.0
     camera_pitch = 0.22
@@ -1240,6 +1283,10 @@ func _setup_needs_ui(layer: CanvasLayer) -> void:
     shower_button.text = "SE LAVER — utiliser 1 eau"
     shower_button.pressed.connect(_shower_player)
     column.add_child(shower_button)
+    var fuel_button := Button.new()
+    fuel_button.text = "REMPLIR LA MOTO — 1 carburant"
+    fuel_button.pressed.connect(_refuel_vehicle)
+    column.add_child(fuel_button)
     var close_button := Button.new()
     close_button.text = "FERMER"
     close_button.pressed.connect(_toggle_needs_panel)
@@ -1361,7 +1408,7 @@ func _setup_market_ui(layer: CanvasLayer) -> void:
     market_inventory_label = Label.new()
     market_inventory_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     column.add_child(market_inventory_label)
-    var goods = [["Eau — 1 000 FC", "eau"], ["Pain — 1 500 FC", "pain"], ["Tomates — 2 000 FC", "tomates"]]
+    var goods = [["Eau — 1 000 FC", "eau"], ["Pain — 1 500 FC", "pain"], ["Tomates — 2 000 FC", "tomates"], ["Carburant — 3 000 FC", "carburant"]]
     for good in goods:
         var row := HBoxContainer.new()
         column.add_child(row)
@@ -1437,7 +1484,7 @@ func _on_economy_updated(balance: int, inventory: Dictionary, message: String) -
     if is_instance_valid(market_balance_label):
         market_balance_label.text = "Portefeuille: %s FC" % _format_fc(balance)
     if is_instance_valid(market_inventory_label):
-        market_inventory_label.text = "Biloko na yo: Eau %d | Pain %d | Tomates %d" % [int(inventory.get("eau", 0)), int(inventory.get("pain", 0)), int(inventory.get("tomates", 0))]
+        market_inventory_label.text = "Biloko: Eau %d | Pain %d | Tomates %d | Carburant %d" % [int(inventory.get("eau", 0)), int(inventory.get("pain", 0)), int(inventory.get("tomates", 0)), int(inventory.get("carburant", 0))]
     if is_instance_valid(market_message_label):
         market_message_label.text = message
 
@@ -1483,12 +1530,31 @@ func _update_mobile_direction() -> void:
         return
     var x := float(held_keys["right"]) - float(held_keys["left"])
     var y := float(held_keys["down"]) - float(held_keys["up"])
-    player.set_mobile_direction(Vector2(x, y))
+    if vehicle_occupied and is_instance_valid(vehicle):
+        vehicle.set_control_direction(Vector2(x, y))
+    else:
+        player.set_mobile_direction(Vector2(x, y))
+
+func _set_run_control(pressed: bool) -> void:
+    if vehicle_occupied and is_instance_valid(vehicle):
+        vehicle.set_accelerating(pressed)
+    elif is_instance_valid(player):
+        player.set_running(pressed)
+
+func _on_vehicle_state_changed(speed_kmh: int, fuel: float) -> void:
+    if is_instance_valid(vehicle_label):
+        vehicle_label.text = "MOTO  %d km/h  |  Carburant %d%%" % [speed_kmh, roundi(fuel)]
 
 func _perform_action() -> void:
     if is_instance_valid(dialogue_panel) and dialogue_panel.visible:
         return
+    if vehicle_occupied:
+        _dismount_vehicle()
+        return
     if _try_talk_to_nearby_npc():
+        return
+    if is_instance_valid(vehicle) and player.global_position.distance_to(vehicle.global_position) <= 3.8:
+        _mount_vehicle()
         return
     if selected_mode == "libre":
         status_label.text = "Ozali na bomoi ya bonsomi. Pusana pene ya moto mpo na kosolola."
@@ -1520,6 +1586,12 @@ func _perform_action() -> void:
 func _update_nearby_npc_hint() -> void:
     if not is_instance_valid(action_button) or not is_instance_valid(player):
         return
+    if vehicle_occupied:
+        action_button.text = "DESCENDRE"
+        return
+    if is_instance_valid(vehicle) and player.global_position.distance_to(vehicle.global_position) <= 3.8:
+        action_button.text = "MONTER SUR LA MOTO"
+        return
     var nearest_name := ""
     var nearest_distance := 3.6
     for person in pedestrian_nodes:
@@ -1530,6 +1602,43 @@ func _update_nearby_npc_hint() -> void:
             nearest_distance = distance
             nearest_name = str(person.name)
     action_button.text = "PARLER — " + nearest_name if not nearest_name.is_empty() else "SALA"
+
+
+func _mount_vehicle() -> void:
+    if not is_instance_valid(vehicle) or vehicle.get_fuel() <= 0.0:
+        status_label.text = "Moto sans carburant. Achète du carburant au marché."
+        return
+    vehicle_occupied = true
+    player.set_physics_process(false)
+    player.visible = false
+    player.velocity = Vector3.ZERO
+    vehicle.mount()
+    vehicle_label.visible = true
+    run_button.text = "GAZ"
+    action_button.text = "DESCENDRE"
+    status_label.text = "Ozali na moto. Utilise les flèches pour diriger et GAZ pour accélérer."
+
+func _dismount_vehicle() -> void:
+    if not is_instance_valid(vehicle) or not vehicle_occupied:
+        return
+    vehicle.dismount()
+    vehicle_occupied = false
+    player.global_position = vehicle.global_position + vehicle.global_basis.x * 1.35 + Vector3(0, 0.15, 0)
+    player.visible = true
+    player.set_physics_process(true)
+    vehicle_label.visible = false
+    run_button.text = "KIMA"
+    action_button.text = "SALA"
+    _save_world_state()
+
+func _refuel_vehicle() -> void:
+    if not is_instance_valid(vehicle):
+        return
+    if economy_manager.use_item("carburant"):
+        vehicle.refuel(55.0)
+        needs_message_label.text = "Moto etondi lisusu carburant."
+    else:
+        needs_message_label.text = "Somba carburant na zando liboso."
 
 func _try_talk_to_nearby_npc() -> bool:
     var closest_id := ""
