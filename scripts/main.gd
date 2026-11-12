@@ -1557,12 +1557,12 @@ func _perform_action() -> void:
     if vehicle_occupied:
         _dismount_vehicle()
         return
-    if _try_talk_to_nearby_npc():
-        return
     if is_instance_valid(vehicle) and player.global_position.distance_to(vehicle.global_position) <= 3.8:
         _mount_vehicle()
         return
     if _try_use_nearby_service():
+        return
+    if _try_talk_to_nearby_npc():
         return
     if selected_mode == "libre":
         status_label.text = "Ozali na bomoi ya bonsomi. Pusana pene ya moto mpo na kosolola."
