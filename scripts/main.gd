@@ -786,14 +786,20 @@ func _apply_npc_routines(hour: int) -> void:
         match role:
             "seller":
                 person.visible = hour >= 6 and hour < 19
+                person.set_meta("activity", "working" if person.visible else "resting")
             "customer":
                 person.visible = hour >= 7 and hour < 18
+                person.set_meta("activity", "shopping" if person.visible else "resting")
             "passer":
                 person.visible = hour >= 6 and hour < 22
+                person.set_meta("walks", person.visible)
+            "child":
+                person.visible = hour >= 7 and hour < 20
+                person.set_meta("walks", hour >= 8 and hour < 19)
+                person.set_meta("activity", "playing" if person.visible else "resting")
             _:
                 person.visible = true
-        if role == "passer":
-            person.set_meta("walks", hour >= 6 and hour < 22)
+                person.set_meta("activity", "at_home")
 
 func _setup_player() -> void:
     player = PLAYER_SCENE.instantiate() as CharacterBody3D
