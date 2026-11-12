@@ -1,7 +1,6 @@
 extends Node3D
 
-const PLAYER_SCRIPT = preload("res://scripts/player.gd")
-const PLAYER_VISUAL_SCRIPT = preload("res://scripts/player_visual.gd")
+const PLAYER_SCENE = preload("res://scenes/characters/player/player.tscn")
 const MISSION_MANAGER_SCRIPT = preload("res://scripts/mission_manager.gd")
 const DIALOGUE_MANAGER_SCRIPT = preload("res://scripts/dialogue_manager.gd")
 const ECONOMY_MANAGER_SCRIPT = preload("res://scripts/economy_manager.gd")
@@ -676,28 +675,15 @@ func _apply_npc_routines(hour: int) -> void:
             person.set_meta("walks", hour >= 6 and hour < 22)
 
 func _setup_player() -> void:
-    player = CharacterBody3D.new()
+    player = PLAYER_SCENE.instantiate() as CharacterBody3D
     player.name = "Joueur"
     player.position = Vector3(0, 1, 0)
     player.visible = false
-    player.set_script(PLAYER_SCRIPT)
     player.set_physics_process(false)
     add_child(player)
 
-    var visual := Node3D.new()
-    visual.name = "ModeleHumain"
-    visual.set_script(PLAYER_VISUAL_SCRIPT)
-    player.add_child(visual)
-
-    var collision := CollisionShape3D.new()
-    var shape := CapsuleShape3D.new()
-    shape.radius = 0.42
-    shape.height = 1.8
-    collision.shape = shape
-    collision.position.y = 0.9
-    player.add_child(collision)
-
     camera = Camera3D.new()
+    camera.name = "CameraTroisiemePersonne"
     camera.current = true
     camera.position = Vector3(0, 5.6, 9.0)
     add_child(camera)
