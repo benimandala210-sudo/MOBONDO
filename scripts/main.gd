@@ -321,7 +321,7 @@ func _create_masina_local_areas() -> void:
     # Aucun commerce réel n'est affiché ou promu sans partenariat/autorisation explicite.
     # Les établissements et services publics peuvent conserver leur dénomination officielle.
     # Emplacements de jeu provisoires : les positions exactes restent à confirmer.
-    _create_pascal_market(Vector3(25.0, 0.0, -51.0))
+    _create_mosala_market(Vector3(25.0, 0.0, -51.0))
     _create_bar_terrace(Vector3(-14.0, 0.0, -16.0), "TERRASSE LOKOLE", Color(0.66, 0.3, 0.16))
     _create_bar_terrace(Vector3(14.0, 0.0, -28.0), "TERRASSE MAYELE", Color(0.24, 0.38, 0.28))
     _create_bar_terrace(Vector3(-14.0, 0.0, -39.0), "BAR KIMIA", Color(0.25, 0.34, 0.52))
@@ -341,7 +341,7 @@ func _create_bar_terrace(origin: Vector3, sign_text: String, awning_color: Color
             _add_visual_box("Chaise terrasse", origin + Vector3(table_x + side * 0.62, 0.48, 4.2), Vector3(0.42, 0.08, 0.42), Color(0.16, 0.22, 0.24))
             _add_visual_box("Dossier chaise", origin + Vector3(table_x + side * 0.62, 0.82, 4.42), Vector3(0.42, 0.62, 0.08), Color(0.16, 0.22, 0.24))
 
-func _create_pascal_market(origin: Vector3) -> void:
+func _create_mosala_market(origin: Vector3) -> void:
     # Marché Mosala : lieu nommé par le concepteur. L'ambiance de foule est jouable,
     # mais aucune personne ni aucun commerçant n'est désigné comme voleur.
     _add_visual_box("Marché Mosala — sol", origin + Vector3(0, 0.04, 0), Vector3(20.0, 0.08, 16.0), Color(0.55, 0.42, 0.28))
