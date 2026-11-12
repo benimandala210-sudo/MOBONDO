@@ -52,6 +52,48 @@ const CONVERSATIONS := {
             }
         ]
     }
+,
+    "passer_1": {
+        "speaker": "Patrick — passant",
+        "opening": "Mbote ndeko! Nazali kokende na mosala. Quartier ezali kolamuka.",
+        "choices": [
+            {"id": "ask_route", "text": "Nzela nini ekendaka na zando?", "reply": "Kende liboso, na sima landa nzela ya kati. Soki obungi, tuna bato ya quartier.", "affinity": 1, "flag": "knows_market_route"},
+            {"id": "wish_good_day", "text": "Mosala malamu, ndeko!", "reply": "Matondo! Yo mpe mokolo malamu.", "affinity": 1, "flag": "greeted_patrick"}
+        ]
+    },
+    "passer_2": {
+        "speaker": "David — mwana quartier",
+        "opening": "Eh ndeko, mbote! Ozali moto ya sika awa?",
+        "choices": [
+            {"id": "ask_neighborhood_news", "text": "Nini ezali koleka na quartier?", "reply": "Lelo bato bazali mingi na zando. Na sima ya midi, okoki kokuta bato mingi na libanda.", "affinity": 1, "flag": "heard_neighborhood_news"},
+            {"id": "greet_david", "text": "Nasepeli komona yo.", "reply": "Ngai mpe ndeko. Tokutana lisusu!", "affinity": 1, "flag": "greeted_david"}
+        ]
+    },
+    "passer_3": {
+        "speaker": "Alain — passant",
+        "opening": "Mbote! Ozali kotambola kaka to ozali koluka esika moko?",
+        "choices": [
+            {"id": "ask_local_places", "text": "Esika ya kopema ezali wapi?", "reply": "Okoki kopema pembeni ya bandako. Kasi tika nzela polele mpo na bato nyonso.", "affinity": 1, "flag": "knows_rest_spots"},
+            {"id": "say_hello_alain", "text": "Nazali kaka kotala quartier.", "reply": "Kitoko! Kotambola esalisaka mpo oyeba esika ofandi.", "affinity": 1, "flag": "greeted_alain"}
+        ]
+    },
+    "resident_1": {
+        "speaker": "Papa Kanku — mofandi ya Mapela",
+        "opening": "Mbote mwana na ngai. Esengo komona yo na quartier.",
+        "choices": [
+            {"id": "ask_life", "text": "Bomoi ezali ndenge nini awa?", "reply": "Bomoi ezali kosenga kosala makasi. Bato basalisanaka, yango nde esalisaka quartier ekola.", "affinity": 2, "flag": "learned_community"},
+            {"id": "offer_help", "text": "Soki ozali na posa ya lisalisi, loba na ngai.", "reply": "Matondo mingi. Kobatela boyokani na bato ezali na motuya.", "affinity": 2, "flag": "offered_help_kanku"}
+        ]
+    },
+    "resident_2": {
+        "speaker": "Mama Nzambe — mofandi ya quartier",
+        "opening": "Mbote ndeko! Ozali komona ndenge quartier ezali na bomoi?",
+        "choices": [
+            {"id": "ask_needs", "text": "Bato ya quartier bazali na posa ya nini?", "reply": "Bato bazali na posa ya misala, kimia mpe nzela ya malamu. Moto na moto akoki kopesa maboko.", "affinity": 2, "flag": "learned_neighborhood_needs"},
+            {"id": "greet_mama", "text": "Nayei kopesa yo mbote.", "reply": "Yambá mbote na ngai mpe. Nzambe apambola mokolo na yo.", "affinity": 1, "flag": "greeted_mama_nzambe"}
+        ]
+    }
+
 }
 
 var active_character_id: String = ""
