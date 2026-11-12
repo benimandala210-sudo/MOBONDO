@@ -317,11 +317,14 @@ func _create_mapela_landmarks() -> void:
     _create_water_point(Vector3(5.5, 0.0, -39.0))
 
 func _create_masina_local_areas() -> void:
+    # RÈGLE COMMERCIALE MOBONDO : les enseignes privées sont fictives par défaut.
+    # Aucun commerce réel n'est affiché ou promu sans partenariat/autorisation explicite.
+    # Les établissements et services publics peuvent conserver leur dénomination officielle.
     # Emplacements de jeu provisoires : les positions exactes restent à confirmer.
     _create_pascal_market(Vector3(25.0, 0.0, -51.0))
-    _create_bar_terrace(Vector3(-14.0, 0.0, -16.0), "BAR-TERRASSE DU QUARTIER", Color(0.66, 0.3, 0.16))
-    _create_bar_terrace(Vector3(14.0, 0.0, -28.0), "TERRASSE POPULAIRE", Color(0.24, 0.38, 0.28))
-    _create_bar_terrace(Vector3(-14.0, 0.0, -39.0), "BAR DU COIN", Color(0.25, 0.34, 0.52))
+    _create_bar_terrace(Vector3(-14.0, 0.0, -16.0), "TERRASSE LOKOLE", Color(0.66, 0.3, 0.16))
+    _create_bar_terrace(Vector3(14.0, 0.0, -28.0), "TERRASSE MAYELE", Color(0.24, 0.38, 0.28))
+    _create_bar_terrace(Vector3(-14.0, 0.0, -39.0), "BAR KIMIA", Color(0.25, 0.34, 0.52))
     _create_masina_communal_office(Vector3(0.0, 0.0, 18.0))
 
 func _create_bar_terrace(origin: Vector3, sign_text: String, awning_color: Color) -> void:
@@ -339,18 +342,18 @@ func _create_bar_terrace(origin: Vector3, sign_text: String, awning_color: Color
             _add_visual_box("Dossier chaise", origin + Vector3(table_x + side * 0.62, 0.82, 4.42), Vector3(0.42, 0.62, 0.08), Color(0.16, 0.22, 0.24))
 
 func _create_pascal_market(origin: Vector3) -> void:
-    # Marché Pascal : lieu nommé par le concepteur. L'ambiance de foule est jouable,
+    # Marché Mosala : lieu nommé par le concepteur. L'ambiance de foule est jouable,
     # mais aucune personne ni aucun commerçant n'est désigné comme voleur.
-    _add_visual_box("Marché Pascal — sol", origin + Vector3(0, 0.04, 0), Vector3(20.0, 0.08, 16.0), Color(0.55, 0.42, 0.28))
-    _add_visual_box("Entrée Marché Pascal", origin + Vector3(0, 2.0, 8.0), Vector3(12.0, 3.8, 0.35), Color(0.22, 0.25, 0.23))
-    _create_street_name_marker("GRAND MARCHE PASCAL", origin + Vector3(0, 4.2, 8.4))
+    _add_visual_box("Marché Mosala — sol", origin + Vector3(0, 0.04, 0), Vector3(20.0, 0.08, 16.0), Color(0.55, 0.42, 0.28))
+    _add_visual_box("Entrée Marché Mosala", origin + Vector3(0, 2.0, 8.0), Vector3(12.0, 3.8, 0.35), Color(0.22, 0.25, 0.23))
+    _create_street_name_marker("MARCHÉ MOSALA", origin + Vector3(0, 4.2, 8.4))
     var awning_colors := [Color(0.72, 0.18, 0.12), Color(0.86, 0.68, 0.18), Color(0.18, 0.38, 0.28), Color(0.2, 0.32, 0.55)]
     for i in range(4):
         var x := -6.0 + float(i) * 4.0
-        _add_visual_box("Etal marché Pascal", origin + Vector3(x, 1.0, -2.0), Vector3(3.0, 2.0, 2.8), Color(0.48, 0.29, 0.17))
+        _add_visual_box("Etal marché Mosala", origin + Vector3(x, 1.0, -2.0), Vector3(3.0, 2.0, 2.8), Color(0.48, 0.29, 0.17))
         _add_visual_box("Bâche étal Pascal", origin + Vector3(x, 2.25, -2.0), Vector3(3.4, 0.12, 3.2), awning_colors[i])
         for item in range(3):
-            _add_visual_box("Produits marché Pascal", origin + Vector3(x - 0.8 + float(item) * 0.8, 2.0, -2.0), Vector3(0.5, 0.3, 0.55), Color(0.76, 0.43, 0.12))
+            _add_visual_box("Produits marché Mosala", origin + Vector3(x - 0.8 + float(item) * 0.8, 2.0, -2.0), Vector3(0.5, 0.3, 0.55), Color(0.76, 0.43, 0.12))
     _add_visual_box("Panneau vigilance marché", origin + Vector3(8.5, 1.8, 5.0), Vector3(0.15, 2.4, 2.6), Color(0.16, 0.2, 0.18))
     var warning := Label3D.new()
     warning.text = "ZALA NA BOKEBI\nBA BILOKO NA YO"
