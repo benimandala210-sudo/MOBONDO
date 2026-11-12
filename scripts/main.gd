@@ -115,6 +115,7 @@ func _process(delta: float) -> void:
     if not menu_active:
         _update_mobile_direction()
         _update_status()
+        _update_nearby_npc_hint()
         world_save_timer += delta
         if world_save_timer >= 15.0:
             world_save_timer = 0.0
@@ -584,9 +585,12 @@ func _create_menu_taxi() -> void:
 func _create_pedestrians() -> void:
     var mado := _create_pedestrian("Mado", npc_position, Color(0.48, 0.2, 0.12), false, 0.0)
     mado.set_meta("character_id", "resident_mapela")
-    _create_pedestrian("Passant 1", Vector3(-4.2, 0.0, -12.0), Color(0.18, 0.38, 0.62), true, 0.72)
-    _create_pedestrian("Passant 2", Vector3(4.2, 0.0, -23.0), Color(0.22, 0.48, 0.3), true, 0.58)
-    _create_pedestrian("Passant 3", Vector3(-3.8, 0.0, -34.0), Color(0.55, 0.34, 0.16), true, 0.66)
+    var passer_one := _create_pedestrian("Passant 1", Vector3(-4.2, 0.0, -12.0), Color(0.18, 0.38, 0.62), true, 0.72)
+    passer_one.set_meta("character_id", "passer_1")
+    var passer_two := _create_pedestrian("Passant 2", Vector3(4.2, 0.0, -23.0), Color(0.22, 0.48, 0.3), true, 0.58)
+    passer_two.set_meta("character_id", "passer_2")
+    var passer_three := _create_pedestrian("Passant 3", Vector3(-3.8, 0.0, -34.0), Color(0.55, 0.34, 0.16), true, 0.66)
+    passer_three.set_meta("character_id", "passer_3")
     var seller := _create_pedestrian("Mama Sifa", Vector3(-4.8, 0.0, -21.0), Color(0.55, 0.18, 0.16), false, 0.0)
     seller.set_meta("character_id", "seller_market")
     seller.set_meta("role", "seller")
@@ -598,10 +602,12 @@ func _create_pedestrians() -> void:
     child_one.set_meta("role", "child")
     var child_two := _create_pedestrian("Enfant joueur 2", Vector3(3.0, 0.0, -58.0), Color(0.22, 0.42, 0.72), true, 0.92)
     child_two.set_meta("role", "child")
-    var resident_one := _create_pedestrian("Habitant devant parcelle", Vector3(-7.2, 0.0, -7.0), Color(0.38, 0.28, 0.2), false, 0.0)
+    var resident_one := _create_pedestrian("Papa Kanku", Vector3(-7.2, 0.0, -7.0), Color(0.38, 0.28, 0.2), false, 0.0)
     resident_one.set_meta("role", "resident")
-    var resident_two := _create_pedestrian("Habitante près maison", Vector3(7.1, 0.0, -37.0), Color(0.48, 0.2, 0.32), false, 0.0)
+    resident_one.set_meta("character_id", "resident_1")
+    var resident_two := _create_pedestrian("Mama Nzambe", Vector3(7.1, 0.0, -37.0), Color(0.48, 0.2, 0.32), false, 0.0)
     resident_two.set_meta("role", "resident")
+    resident_two.set_meta("character_id", "resident_2")
     _create_street_motos()
 
 func _create_street_motos() -> void:
@@ -1354,6 +1360,20 @@ func _perform_action() -> void:
                 status_label.text = "Pusana pene ya colis liboso ya kosala SALA."
         _:
             status_label.text = "Mission oyo ebongisami naino te."
+
+func _update_nearby_npc_hint() -> void:
+    if not is_instance_valid(action_button) or not is_instance_valid(player):
+        return
+    var nearest_name := ""
+    var nearest_distance := 3.6
+    for person in pedestrian_nodes:
+        if not is_instance_valid(person) or not person.visible or not person.has_meta("character_id"):
+            continue
+        var distance := player.global_position.distance_to(person.global_position)
+        if distance < nearest_distance:
+            nearest_distance = distance
+            nearest_name = str(person.name)
+    action_button.text = "PARLER — " + nearest_name if not nearest_name.is_empty() else "SALA"
 
 func _try_talk_to_nearby_npc() -> bool:
     var closest_id := ""
