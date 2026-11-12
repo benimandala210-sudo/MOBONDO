@@ -948,6 +948,17 @@ func _create_pedestrian(person_name: String, origin: Vector3, shirt_color: Color
     person.set_meta("walk_direction", 1.0)
     person.set_meta("walk_limit", 2.2 if walks else 0.0)
     person.set_meta("activity", "walking" if walks else "standing")
+    person.set_meta("ai_wait", float((pedestrian_nodes.size() * 3) % 5) * 0.2)
+    person.set_meta("ai_route_index", 0)
+    var route: Array[Vector3] = []
+    if walks:
+        var spread := 0.85 if person_name.contains("Enfant") else 1.35
+        var depth := 2.4 if person_name.contains("Enfant") else 4.0
+        route.append(origin + Vector3(spread, 0.0, -depth))
+        route.append(origin + Vector3(spread, 0.0, depth))
+        route.append(origin + Vector3(-spread, 0.0, depth))
+        route.append(origin + Vector3(-spread, 0.0, -depth))
+    person.set_meta("ai_route", route)
     pedestrian_nodes.append(person)
     pedestrian_origins.append(origin)
     pedestrian_speeds.append(speed)
@@ -959,55 +970,81 @@ func _animate_street_life(delta: float) -> void:
     if is_instance_valid(street_moto):
         street_moto.position.z = -2.0 - fposmod(menu_time * 3.2, 68.0)
         street_moto.rotation.y = PI
+
+    # Déplacements autonomes sur de petites routes de quartier, avec pauses.
     for i in range(pedestrian_nodes.size()):
         var person := pedestrian_nodes[i]
-        if not is_instance_valid(person):
+        if not is_instance_valid(person) or not person.visible:
             continue
-        if bool(person.get_meta("walks", false)) and person.visible:
-            var direction := float(person.get_meta("walk_direction", 1.0))
-            var limit := float(person.get_meta("walk_limit", 2.2))
-            var speed: float = pedestrian_speeds[i]
-            person.position.x += direction * speed * delta
-            var offset := person.position.x - pedestrian_origins[i].x
-            if offset >= limit:
-                person.position.x = pedestrian_origins[i].x + limit
-                person.set_meta("walk_direction", -1.0)
-                direction = -1.0
-            elif offset <= -limit:
-                person.position.x = pedestrian_origins[i].x - limit
-                person.set_meta("walk_direction", 1.0)
-                direction = 1.0
-            person.rotation.y = 0.0 if direction > 0.0 else PI
-            person.position.y = 0.0
-            var phase := menu_time * speed * 7.0 + float(person.get_meta("phase", 0.0))
-            var legs: Array = person.get_meta("leg_nodes", [])
-            for leg_index in range(legs.size()):
-                var leg = legs[leg_index]
-                if is_instance_valid(leg):
-                    leg.rotation.x = sin(phase + float(leg_index) * PI) * 0.38
-            var arms: Array = person.get_meta("arm_nodes", [])
-            for arm_index in range(arms.size()):
-                var arm = arms[arm_index]
-                if is_instance_valid(arm):
-                    arm.rotation.x = sin(phase + float(arm_index) * PI + PI) * 0.28
-            person.set_meta("activity", "walking")
+
+        var walking := bool(person.get_meta("walks", false))
+        var route: Array = person.get_meta("ai_route", [])
+        if walking and not route.is_empty():
+            var wait_left := float(person.get_meta("ai_wait", 0.0))
+            if wait_left > 0.0:
+                wait_left = maxf(0.0, wait_left - delta)
+                person.set_meta("ai_wait", wait_left)
+                person.set_meta("activity", "waiting")
+            else:
+                var route_index := int(person.get_meta("ai_route_index", 0)) % route.size()
+                var destination: Vector3 = route[route_index]
+                var old_position := person.position
+                person.position = person.position.move_toward(destination, pedestrian_speeds[i] * delta)
+                var movement := person.position - old_position
+                if movement.length() > 0.001:
+                    person.rotation.y = atan2(-movement.x, -movement.z)
+                    person.position.y = 0.0
+                    person.set_meta("activity", "walking")
+                if person.position.distance_to(destination) < 0.12:
+                    person.set_meta("ai_route_index", (route_index + 1) % route.size())
+                    person.set_meta("ai_wait", 0.45 + float((i * 7) % 9) * 0.16)
+                    person.set_meta("activity", "waiting")
         else:
-            person.position.y = abs(sin(menu_time * 1.8)) * 0.018
-            var legs: Array = person.get_meta("leg_nodes", [])
-            for leg in legs:
-                if is_instance_valid(leg):
-                    leg.rotation.x = 0.0
-            var arms: Array = person.get_meta("arm_nodes", [])
-            for arm in arms:
-                if is_instance_valid(arm):
-                    arm.rotation.x = 0.0
+            person.position.y = abs(sin(menu_time * 1.8 + float(i)) * 0.018)
             if str(person.get_meta("role", "")) == "seller":
                 person.set_meta("activity", "working")
             elif str(person.get_meta("role", "")) == "customer":
                 person.set_meta("activity", "shopping")
+            elif str(person.get_meta("role", "")) == "child" and person.visible:
+                person.set_meta("activity", "playing")
             else:
                 person.set_meta("activity", "standing")
 
+        var phase := menu_time * pedestrian_speeds[i] * 7.0 + float(person.get_meta("phase", 0.0))
+        var moving_now := walking and float(person.get_meta("ai_wait", 0.0)) <= 0.0
+        var legs: Array = person.get_meta("leg_nodes", [])
+        for leg_index in range(legs.size()):
+            var leg = legs[leg_index]
+            if is_instance_valid(leg):
+                leg.rotation.x = sin(phase + float(leg_index) * PI) * (0.38 if moving_now else 0.0)
+        var arms: Array = person.get_meta("arm_nodes", [])
+        for arm_index in range(arms.size()):
+            var arm = arms[arm_index]
+            if is_instance_valid(arm):
+                arm.rotation.x = sin(phase + float(arm_index) * PI + PI) * (0.28 if moving_now else 0.0)
+
+    # Les habitants immobiles se tournent vers un voisin proche : la rue paraît habitée.
+    for i in range(pedestrian_nodes.size()):
+        var person := pedestrian_nodes[i]
+        if not is_instance_valid(person) or not person.visible or bool(person.get_meta("walks", false)):
+            continue
+        var nearest_distance := 2.8
+        var nearest_person: Node3D = null
+        for j in range(pedestrian_nodes.size()):
+            if i == j:
+                continue
+            var other := pedestrian_nodes[j]
+            if not is_instance_valid(other) or not other.visible:
+                continue
+            var distance := Vector2(person.position.x - other.position.x, person.position.z - other.position.z).length()
+            if distance < nearest_distance:
+                nearest_distance = distance
+                nearest_person = other
+        if nearest_person != null:
+            var toward := nearest_person.position - person.position
+            if Vector2(toward.x, toward.z).length() > 0.05:
+                var target_yaw := atan2(-toward.x, -toward.z)
+                person.rotation.y = lerp_angle(person.rotation.y, target_yaw, minf(delta * 1.8, 1.0))
 
 func _skip_game_time(minutes: float, advance_needs: bool = true) -> void:
     if minutes <= 0.0:
