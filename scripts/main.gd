@@ -57,6 +57,9 @@ var camera_yaw := 0.0
 var camera_pitch := 0.22
 var camera_distance := 7.0
 var camera_dragging := false
+var world_save_timer := 0.0
+var has_saved_world := false
+var saved_player_position := Vector3(0, 1, 0)
 
 func _ready() -> void:
     _setup_world()
@@ -78,6 +81,7 @@ func _ready() -> void:
     economy_manager = ECONOMY_MANAGER_SCRIPT.new()
     economy_manager.economy_updated.connect(_on_economy_updated)
     add_child(economy_manager)
+    _load_world_state()
     _refresh_mission()
 
 func _process(delta: float) -> void:
@@ -108,6 +112,10 @@ func _process(delta: float) -> void:
     if not menu_active:
         _update_mobile_direction()
         _update_status()
+        world_save_timer += delta
+        if world_save_timer >= 15.0:
+            world_save_timer = 0.0
+            _save_world_state()
 
 func _unhandled_input(event: InputEvent) -> void:
     if event is InputEventKey and event.pressed and not event.echo:
@@ -126,6 +134,59 @@ func _unhandled_input(event: InputEvent) -> void:
 func _rotate_game_camera(delta_pixels: Vector2) -> void:
     camera_yaw -= delta_pixels.x * 0.006
     camera_pitch = clampf(camera_pitch + delta_pixels.y * 0.004, -0.12, 0.62)
+
+func _notification(what: int) -> void:
+    if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_PREDELETE:
+        if not menu_active and is_instance_valid(player):
+            _save_world_state()
+
+func _save_world_state() -> void:
+    if not is_instance_valid(player) or menu_active:
+        return
+    var data := {
+        "version": 1,
+        "player_position": {
+            "x": player.global_position.x,
+            "y": player.global_position.y,
+            "z": player.global_position.z
+        },
+        "world_minutes": world_minutes,
+        "camera_yaw": camera_yaw,
+        "camera_pitch": camera_pitch,
+        "selected_mode": selected_mode
+    }
+    var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+    if file == null:
+        push_warning("MOBONDO: impossible d'enregistrer la progression du monde.")
+        return
+    file.store_string(JSON.stringify(data))
+    file.close()
+
+func _load_world_state() -> void:
+    if not FileAccess.file_exists(SAVE_PATH):
+        return
+    var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
+    if file == null:
+        return
+    var parsed = JSON.parse_string(file.get_as_text())
+    file.close()
+    if typeof(parsed) != TYPE_DICTIONARY:
+        push_warning("MOBONDO: sauvegarde du monde illisible, nouvelle partie disponible.")
+        return
+    var position_data = parsed.get("player_position", {})
+    if position_data is Dictionary:
+        saved_player_position = Vector3(
+            float(position_data.get("x", 0.0)),
+            maxf(float(position_data.get("y", 1.0)), 0.5),
+            float(position_data.get("z", 0.0))
+        )
+        has_saved_world = true
+    world_minutes = fposmod(float(parsed.get("world_minutes", world_minutes)), 1440.0)
+    camera_yaw = float(parsed.get("camera_yaw", camera_yaw))
+    camera_pitch = clampf(float(parsed.get("camera_pitch", camera_pitch)), -0.12, 0.62)
+    var loaded_mode := str(parsed.get("selected_mode", "histoire"))
+    if loaded_mode == "histoire" or loaded_mode == "libre":
+        selected_mode = loaded_mode
 
 func _setup_world() -> void:
     var environment := WorldEnvironment.new()
@@ -1007,7 +1068,7 @@ func _play_start_transition() -> void:
     menu_active = false
     menu_root.visible = false
     if is_instance_valid(player):
-        player.global_position = Vector3(0, 1, 0)
+        player.global_position = saved_player_position if has_saved_world else Vector3(0, 1, 0)
         player.velocity = Vector3.ZERO
         player.visible = true
         player.set_physics_process(false)
