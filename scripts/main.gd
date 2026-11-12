@@ -480,22 +480,60 @@ func _create_mapela_houses() -> void:
         _create_kinshasa_house("Parcelle droite %d" % (i + 1), Vector3(9.0, 0.0, z - 3.0), wall_colors[(i + 2) % wall_colors.size()], false, i + 1)
 
 func _create_kinshasa_house(house_name: String, center: Vector3, wall_color: Color, faces_left: bool, variation: int) -> void:
+    # Parcelle résidentielle : façade, soubassement, ouvertures et toiture en tôle.
     _add_box(house_name, center + Vector3(0, 2.0, 0), Vector3(6.0, 4.0, 7.0), wall_color)
     var front_x := center.x + (3.04 if faces_left else -3.04)
     var sign := 1.0 if faces_left else -1.0
+    var trim_color := Color(0.82, 0.76, 0.63)
+    var metal_color := Color(0.27, 0.3, 0.31) if variation % 2 == 0 else Color(0.38, 0.34, 0.29)
     var door_z := center.z + (0.8 if variation % 2 == 0 else -0.8)
-    _add_visual_box("Porte " + house_name, Vector3(front_x, 1.05, door_z), Vector3(0.12, 2.1, 1.15), Color(0.24, 0.16, 0.11))
-    for offset in [-1.8, 1.8]:
-        _add_visual_box("Fenêtre " + house_name, Vector3(front_x + sign * 0.08, 2.35, center.z + offset), Vector3(0.12, 1.0, 1.25), Color(0.16, 0.24, 0.27))
-        _add_visual_box("Volet " + house_name, Vector3(front_x + sign * 0.16, 2.35, center.z + offset), Vector3(0.08, 1.08, 0.08), Color(0.32, 0.22, 0.15))
-    _add_visual_box("Toit tôle " + house_name, center + Vector3(0, 4.18, 0), Vector3(6.5, 0.28, 7.5), Color(0.31, 0.34, 0.35))
-    for rib in range(9):
-        var rib_z := center.z - 3.35 + float(rib) * 0.82
-        _add_visual_box("Nervure tôle", Vector3(center.x, 4.34, rib_z), Vector3(6.45, 0.035, 0.045), Color(0.48, 0.5, 0.49))
-    _add_visual_box("Auvent " + house_name, Vector3(front_x + sign * 0.35, 3.1, center.z), Vector3(0.9, 0.12, 3.2), Color(0.43, 0.25, 0.13))
+    _add_visual_box("Soubassement " + house_name, center + Vector3(0, 0.22, 0), Vector3(6.08, 0.42, 7.08), Color(0.48, 0.44, 0.37))
+    _add_visual_box("Linteau façade " + house_name, Vector3(front_x + sign * 0.045, 3.88, center.z), Vector3(0.16, 0.22, 6.0), trim_color)
+    _add_visual_box("Encadrement porte " + house_name, Vector3(front_x + sign * 0.1, 1.08, door_z), Vector3(0.18, 2.22, 1.34), Color(0.72, 0.66, 0.53))
+    _add_visual_box("Porte " + house_name, Vector3(front_x + sign * 0.2, 1.05, door_z), Vector3(0.12, 2.05, 1.12), Color(0.2, 0.13, 0.09))
+    _add_visual_box("Poignée porte " + house_name, Vector3(front_x + sign * 0.28, 1.05, door_z + 0.36), Vector3(0.045, 0.12, 0.045), Color(0.78, 0.63, 0.32))
+    _add_visual_box("Marche entrée " + house_name, Vector3(front_x + sign * 0.48, 0.16, door_z), Vector3(0.72, 0.22, 1.55), Color(0.56, 0.53, 0.46))
+    for window_index in range(2):
+        var window_z := center.z + (-1.8 if window_index == 0 else 1.8)
+        _add_visual_box("Fenêtre vitrée " + house_name, Vector3(front_x + sign * 0.1, 2.38, window_z), Vector3(0.13, 1.0, 1.2), Color(0.08, 0.2, 0.27))
+        _add_visual_box("Cadre haut fenêtre " + house_name, Vector3(front_x + sign * 0.19, 2.92, window_z), Vector3(0.13, 0.12, 1.42), trim_color)
+        _add_visual_box("Cadre bas fenêtre " + house_name, Vector3(front_x + sign * 0.19, 1.84, window_z), Vector3(0.13, 0.12, 1.42), trim_color)
+        for frame_side in [-1.0, 1.0]:
+            _add_visual_box("Montant fenêtre " + house_name, Vector3(front_x + sign * 0.19, 2.38, window_z + frame_side * 0.66), Vector3(0.13, 1.16, 0.12), trim_color)
+        _add_visual_box("Barre fenêtre " + house_name, Vector3(front_x + sign * 0.27, 2.38, window_z), Vector3(0.05, 0.95, 0.055), metal_color)
+        _add_visual_box("Volet fenêtre " + house_name, Vector3(front_x + sign * 0.24, 2.38, window_z - 0.82), Vector3(0.08, 1.1, 0.12), metal_color)
+    _add_visual_box("Toit tôle " + house_name, center + Vector3(0, 4.18, 0), Vector3(6.55, 0.28, 7.55), metal_color)
+    for rib in range(13):
+        var rib_z := center.z - 3.55 + float(rib) * 0.59
+        _add_visual_box("Nervure tôle " + house_name, Vector3(center.x, 4.34, rib_z), Vector3(6.48, 0.035, 0.045), Color(0.52, 0.53, 0.5))
+    _add_visual_box("Gouttière " + house_name, Vector3(center.x, 4.05, center.z + 3.78), Vector3(6.45, 0.12, 0.12), Color(0.22, 0.25, 0.26))
+    _add_visual_box("Auvent " + house_name, Vector3(front_x + sign * 0.48, 3.15, center.z), Vector3(1.05, 0.13, 3.35), Color(0.43, 0.25, 0.13))
+    for support_z in [-1.35, 1.35]:
+        _add_visual_box("Support auvent " + house_name, Vector3(front_x + sign * 0.88, 2.58, center.z + support_z), Vector3(0.07, 1.05, 0.07), Color(0.24, 0.22, 0.19))
+    var number_plate := Label3D.new()
+    number_plate.text = "N° %02d" % (variation + 1)
+    number_plate.font_size = 22
+    number_plate.pixel_size = 0.009
+    number_plate.modulate = Color(0.96, 0.88, 0.68)
+    number_plate.position = Vector3(front_x + sign * 0.3, 2.0, door_z + 0.9)
+    number_plate.rotation.y = PI / 2.0
+    add_child(number_plate)
+    var porch_light := MeshInstance3D.new()
+    var porch_mesh := SphereMesh.new()
+    porch_mesh.radius = 0.09
+    porch_mesh.height = 0.13
+    porch_light.mesh = porch_mesh
+    porch_light.position = Vector3(front_x + sign * 0.32, 3.45, door_z)
+    var porch_material := StandardMaterial3D.new()
+    porch_material.albedo_color = Color(1.0, 0.78, 0.42)
+    porch_material.emission_enabled = true
+    porch_material.emission = Color(1.0, 0.58, 0.2)
+    porch_material.emission_energy_multiplier = 0.35
+    porch_light.material_override = porch_material
+    add_child(porch_light)
     _add_visual_box("Mur parcelle " + house_name, Vector3(center.x, 0.55, center.z + 4.0), Vector3(6.8, 1.1, 0.22), Color(0.55, 0.52, 0.45))
     for gate_z in [center.z - 2.0, center.z + 2.0]:
-        _add_visual_box("Poteau parcelle", Vector3(front_x, 0.9, gate_z), Vector3(0.28, 1.8, 0.28), Color(0.42, 0.4, 0.36))
+        _add_visual_box("Poteau parcelle " + house_name, Vector3(front_x, 0.9, gate_z), Vector3(0.28, 1.8, 0.28), Color(0.42, 0.4, 0.36))
 
 func _create_market_detail() -> void:
     for i in range(4):
@@ -516,12 +554,19 @@ func _create_roadside_environment() -> void:
     _add_visual_box("Caniveau droite", Vector3(5.15, -0.12, -15.0), Vector3(0.3, 0.18, 80.0), Color(0.25, 0.24, 0.2))
     _add_visual_box("Trottoir terre gauche", Vector3(-6.2, 0.0, -15.0), Vector3(1.8, 0.12, 80.0), Color(0.58, 0.43, 0.29))
     _add_visual_box("Trottoir terre droite", Vector3(6.2, 0.0, -15.0), Vector3(1.8, 0.12, 80.0), Color(0.58, 0.43, 0.29))
-    # Quelques arbres et touffes de végétation pour casser la répétition.
+    # Végétation de bordure et poteaux de distribution électrique.
     for i in range(7):
         var z := -3.0 - float(i) * 10.5
         _create_roadside_tree(Vector3(-13.2, 0.0, z), 1.0 + float(i % 3) * 0.12)
         if i % 2 == 0:
             _create_roadside_tree(Vector3(13.0, 0.0, z - 3.0), 0.9)
+    _create_utility_pole(Vector3(-7.8, 0.0, -5.0))
+    _create_utility_pole(Vector3(7.8, 0.0, -24.0))
+    _create_utility_pole(Vector3(-7.8, 0.0, -44.0))
+    _create_utility_pole(Vector3(7.8, 0.0, -64.0))
+    _create_overhead_cable(Vector3(-7.8, 6.9, -5.0), Vector3(7.8, 6.9, -24.0))
+    _create_overhead_cable(Vector3(7.8, 6.9, -24.0), Vector3(-7.8, 6.9, -44.0))
+    _create_overhead_cable(Vector3(-7.8, 6.9, -44.0), Vector3(7.8, 6.9, -64.0))
     # Panneaux fictifs : espaces de visibilité réservés aux marques du projet.
     _create_brand_sign("MOBONDO", Vector3(-7.2, 2.7, -12.0), Color(0.12, 0.12, 0.13))
     _create_brand_sign("KIRADESIGN", Vector3(7.2, 2.7, -30.0), Color(0.12, 0.12, 0.13))
@@ -586,6 +631,30 @@ func _create_roadside_tree(origin: Vector3, scale_value: float) -> void:
     crown.position = origin + Vector3(0, 2.2 * scale_value, 0)
     crown.material_override = _material(Color(0.17, 0.38, 0.18))
     add_child(crown)
+
+func _create_utility_pole(origin: Vector3) -> void:
+    var pole := MeshInstance3D.new()
+    var pole_mesh := CylinderMesh.new()
+    pole_mesh.top_radius = 0.09
+    pole_mesh.bottom_radius = 0.15
+    pole_mesh.height = 7.2
+    pole.mesh = pole_mesh
+    pole.position = origin + Vector3(0, 3.6, 0)
+    pole.material_override = _material(Color(0.28, 0.22, 0.16))
+    add_child(pole)
+    _add_visual_box("Traverse poteau électrique", origin + Vector3(0, 6.75, 0), Vector3(1.7, 0.12, 0.14), Color(0.24, 0.22, 0.19))
+    for offset in [-0.68, 0.0, 0.68]:
+        _add_visual_box("Isolateur électrique", origin + Vector3(offset, 6.92, 0), Vector3(0.12, 0.28, 0.12), Color(0.68, 0.66, 0.56))
+
+func _create_overhead_cable(start_point: Vector3, end_point: Vector3) -> void:
+    var cable := MeshInstance3D.new()
+    var cable_mesh := BoxMesh.new()
+    cable_mesh.size = Vector3(0.035, 0.035, start_point.distance_to(end_point))
+    cable.mesh = cable_mesh
+    cable.position = (start_point + end_point) * 0.5
+    cable.look_at(end_point, Vector3.UP)
+    cable.material_override = _material(Color(0.075, 0.08, 0.085))
+    add_child(cable)
 
 func _create_brand_sign(text_value: String, origin: Vector3, background_color: Color) -> void:
     _add_visual_box("Panneau " + text_value, origin, Vector3(0.16, 1.1, 3.0), background_color)
