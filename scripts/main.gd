@@ -1326,7 +1326,7 @@ func _rest_player() -> void:
     _save_world_state()
 
 func _sleep_player() -> void:
-    var minutes_slept := needs_manager.sleep(8.0)
+    var minutes_slept: float = needs_manager.sleep(8.0)
     _skip_game_time(minutes_slept, false)
     needs_message_label.text = "Olali ngonga 8. Mokolo ya sika ebandi."
     _save_world_state()
