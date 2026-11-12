@@ -15,6 +15,11 @@ var helped_today := false
 var completed_jobs_today: Array[String] = []
 var work_experience := 0
 var work_level := 1
+var player_business_owned := false
+var player_business_sales := 0
+
+const PLAYER_BUSINESS_COST := 20000
+const BUSINESS_SELL_PRICES := {"eau": 1300, "pain": 2000, "tomates": 2700, "carburant": 3800}
 
 const DAILY_JOBS := {
     "porter": {"name": "Transporter les marchandises", "reward": 4000, "experience": 30},
@@ -98,6 +103,46 @@ func do_job(job_id: String) -> bool:
     ])
     return true
 
+func buy_player_business() -> bool:
+    if player_business_owned:
+        _emit_update("Ozali déjà na kiosque na yo. Sala mombongo mpo na kozwa mbongo.")
+        return false
+    if balance < PLAYER_BUSINESS_COST:
+        _emit_update("Esengeli %s FC mpo na kosomba kiosque. Sala misala mpe bomba mbongo." % _format_amount(PLAYER_BUSINESS_COST))
+        return false
+    balance -= PLAYER_BUSINESS_COST
+    player_business_owned = true
+    _save_state()
+    _emit_update("Kiosque na yo efungwami! Zongisa biloko na zando, na nsima sala mombongo.")
+    return true
+
+func operate_player_business() -> bool:
+    if not player_business_owned:
+        _emit_update("Osengeli naino kosomba kiosque na yo.")
+        return false
+    var sold_count := 0
+    var revenue := 0
+    for item_id in BUSINESS_SELL_PRICES.keys():
+        var quantity := int(inventory.get(item_id, 0))
+        if quantity <= 0:
+            continue
+        sold_count += quantity
+        revenue += quantity * int(BUSINESS_SELL_PRICES[item_id])
+        inventory[item_id] = 0
+    if sold_count == 0:
+        _emit_update("Kiosque ezali polele kasi biloko ezali te. Somba biloko na zando liboso.")
+        return false
+    balance += revenue
+    player_business_sales += sold_count
+    _save_state()
+    _emit_update("Mombongo esili: otekaki biloko %d, ozwaki %s FC. Motango ya biloko etekamaki: %d." % [sold_count, _format_amount(revenue), player_business_sales])
+    return true
+
+func get_player_business_status() -> String:
+    if not player_business_owned:
+        return "Kiosque na yo: naino te — capital esengeli: %s FC" % _format_amount(PLAYER_BUSINESS_COST)
+    return "KIOSQUE YA YO: efungwami | biloko nyonso etekamaki: %d" % player_business_sales
+
 func do_market_job() -> bool:
     return do_job("porter")
 
@@ -140,7 +185,9 @@ func _save_state() -> void:
         "helped_today": helped_today,
         "completed_jobs_today": completed_jobs_today,
         "work_experience": work_experience,
-        "work_level": work_level
+        "work_level": work_level,
+        "player_business_owned": player_business_owned,
+        "player_business_sales": player_business_sales
     }))
     file.close()
 
@@ -167,3 +214,5 @@ func _load_state() -> void:
                 completed_jobs_today.append(job_id)
     work_experience = maxi(0, int(parsed.get("work_experience", 0)))
     work_level = clampi(int(parsed.get("work_level", 1)), 1, 10)
+    player_business_owned = bool(parsed.get("player_business_owned", false))
+    player_business_sales = maxi(0, int(parsed.get("player_business_sales", 0)))
