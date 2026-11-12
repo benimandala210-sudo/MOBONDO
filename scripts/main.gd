@@ -36,6 +36,9 @@ var dialogue_choices: VBoxContainer
 var mission_label: Label
 var status_label: Label
 var action_button: Button
+var transport_panel: PanelContainer
+var transport_vehicle: Node3D
+var public_transport_occupied := false
 var run_button: Button
 var held_keys := {"left": false, "right": false, "up": false, "down": false}
 
@@ -145,7 +148,7 @@ func _process(delta: float) -> void:
                 sin(camera_pitch),
                 cos(camera_yaw) * cos(camera_pitch)
             ) * camera_distance
-            var follow_target: Vector3 = vehicle.global_position if vehicle_occupied and is_instance_valid(vehicle) else player.global_position
+            var follow_target: Vector3 = transport_vehicle.global_position if public_transport_occupied and is_instance_valid(transport_vehicle) else (vehicle.global_position if vehicle_occupied and is_instance_valid(vehicle) else player.global_position)
             var camera_target := follow_target + Vector3(0, 1.8, 0) + orbit_offset
             camera.global_position = camera.global_position.lerp(camera_target, minf(delta * 7.0, 1.0))
             var look_target := follow_target + Vector3(0, 1.25, 0)
@@ -1325,6 +1328,7 @@ func _setup_ui() -> void:
     _setup_dialogue_ui(layer)
     _setup_market_ui(layer)
     _setup_needs_ui(layer)
+    _setup_transport_ui(layer)
 
 func _setup_main_menu() -> void:
     menu_layer = CanvasLayer.new()
@@ -1923,8 +1927,137 @@ func _on_vehicle_state_changed(speed_kmh: int, fuel: float) -> void:
     if is_instance_valid(vehicle_label):
         vehicle_label.text = "MOTO  %d km/h  |  Carburant %d%%" % [speed_kmh, roundi(fuel)]
 
+func _setup_transport_ui(layer: CanvasLayer) -> void:
+    transport_panel = PanelContainer.new()
+    transport_panel.name = "TransportPublicPanel"
+    transport_panel.anchor_left = 0.5
+    transport_panel.anchor_top = 0.5
+    transport_panel.anchor_right = 0.5
+    transport_panel.anchor_bottom = 0.5
+    transport_panel.offset_left = -155
+    transport_panel.offset_top = -170
+    transport_panel.offset_right = 155
+    transport_panel.offset_bottom = 170
+    transport_panel.visible = false
+    layer.add_child(transport_panel)
+
+func _find_nearby_public_transport() -> Node3D:
+    if not is_instance_valid(player) or vehicle_occupied or public_transport_occupied:
+        return null
+    var closest: Node3D = null
+    var closest_distance := 3.6
+    for candidate in traffic_vehicles:
+        if not is_instance_valid(candidate) or not candidate.visible:
+            continue
+        var distance := player.global_position.distance_to(candidate.global_position)
+        if distance < closest_distance:
+            closest_distance = distance
+            closest = candidate
+    return closest
+
+func _open_transport_menu(candidate: Node3D) -> void:
+    if not is_instance_valid(candidate) or not is_instance_valid(transport_panel):
+        return
+    transport_vehicle = candidate
+    var is_moto := str(candidate.get_meta("traffic_label", "")).contains("Moto")
+    var transport_name := "MOTO-TAXI" if is_moto else "TAXI JAUNE"
+    var base_fare := 800 if is_moto else 1500
+    var destinations: Array[Dictionary] = [
+        {"name": "Marché de Mapela", "position": Vector3(0.0, 0.0, -15.0)},
+        {"name": "Raïs", "position": Vector3(-5.0, 0.0, -49.0)},
+        {"name": "Point d'eau", "position": Vector3(5.5, 0.0, -39.0)},
+        {"name": "Centre du quartier", "position": Vector3(0.0, 0.0, -4.0)}
+    ]
+    var old_content := transport_panel.get_child_count()
+    for child_index in range(old_content - 1, -1, -1):
+        transport_panel.get_child(child_index).queue_free()
+    var column := VBoxContainer.new()
+    column.add_theme_constant_override("separation", 8)
+    transport_panel.add_child(column)
+    var heading := Label.new()
+    heading.text = transport_name + " — choisir destination"
+    heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    heading.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    column.add_child(heading)
+    var explanation := Label.new()
+    explanation.text = "Le prix est payé avant le départ."
+    explanation.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    column.add_child(explanation)
+    for destination in destinations:
+        var destination_position: Vector3 = destination["position"]
+        var distance := candidate.global_position.distance_to(destination_position)
+        var fare := base_fare + roundi(distance * (110.0 if is_moto else 160.0))
+        var choice := Button.new()
+        choice.text = "%s — %s FC" % [str(destination["name"]), _format_fc(fare)]
+        choice.custom_minimum_size = Vector2(280, 48)
+        choice.pressed.connect(_start_public_transport.bind(destination_position, fare, str(destination["name"])))
+        column.add_child(choice)
+    var close_button := Button.new()
+    close_button.text = "ANNULER"
+    close_button.pressed.connect(_close_transport_menu)
+    column.add_child(close_button)
+    transport_panel.visible = true
+    if is_instance_valid(player):
+        player.set_physics_process(false)
+
+func _close_transport_menu() -> void:
+    if is_instance_valid(transport_panel):
+        transport_panel.visible = false
+    if is_instance_valid(player) and not public_transport_occupied:
+        player.set_physics_process(true)
+    transport_vehicle = null
+
+func _start_public_transport(destination: Vector3, fare: int, destination_name: String) -> void:
+    if not is_instance_valid(transport_vehicle) or not is_instance_valid(player):
+        _close_transport_menu()
+        return
+    if not economy_manager.charge(fare, "le transport public"):
+        status_label.text = "Mbongo ekoki te mpo na mobembo oyo."
+        _close_transport_menu()
+        return
+    for i in range(traffic_vehicles.size() - 1, -1, -1):
+        if traffic_vehicles[i] == transport_vehicle:
+            traffic_vehicles.remove_at(i)
+            traffic_base_speeds.remove_at(i)
+            traffic_directions.remove_at(i)
+            traffic_current_speeds.remove_at(i)
+            break
+    if is_instance_valid(transport_panel):
+        transport_panel.visible = false
+    public_transport_occupied = true
+    player.visible = false
+    player.set_physics_process(false)
+    var ride_distance := transport_vehicle.global_position.distance_to(destination)
+    var ride_minutes := maxi(3, roundi(ride_distance / 5.0))
+    _skip_game_time(float(ride_minutes))
+    status_label.text = "Mobembo ezali kokende na " + destination_name + "..."
+    var ride_tween := create_tween()
+    ride_tween.set_trans(Tween.TRANS_SINE)
+    ride_tween.set_ease(Tween.EASE_IN_OUT)
+    ride_tween.tween_property(transport_vehicle, "position", destination, 2.8)
+    ride_tween.tween_callback(_finish_public_transport.bind(destination, destination_name))
+
+func _finish_public_transport(destination: Vector3, destination_name: String) -> void:
+    public_transport_occupied = false
+    if is_instance_valid(player):
+        player.global_position = destination + Vector3(1.8, 0.15, 0.0)
+        player.visible = true
+        player.set_physics_process(true)
+    if is_instance_valid(transport_vehicle):
+        transport_vehicle.visible = true
+    transport_vehicle = null
+    status_label.text = "Ozongi na %s. Mobembo esili." % destination_name
+    _save_world_state()
+
 func _perform_action() -> void:
     if is_instance_valid(dialogue_panel) and dialogue_panel.visible:
+        return
+    if public_transport_occupied:
+        status_label.text = "Ozali na mobembo. Taxi ezali kokende na esika oponaki."
+        return
+    var nearby_transport := _find_nearby_public_transport()
+    if is_instance_valid(nearby_transport):
+        _open_transport_menu(nearby_transport)
         return
     if vehicle_occupied:
         _dismount_vehicle()
@@ -1966,8 +2099,15 @@ func _perform_action() -> void:
 func _update_nearby_npc_hint() -> void:
     if not is_instance_valid(action_button) or not is_instance_valid(player):
         return
+    if public_transport_occupied:
+        action_button.text = "EN VOYAGE"
+        return
     if vehicle_occupied:
         action_button.text = "DESCENDRE"
+        return
+    var nearby_transport := _find_nearby_public_transport()
+    if is_instance_valid(nearby_transport):
+        action_button.text = "PRENDRE " + ("MOTO-TAXI" if str(nearby_transport.get_meta("traffic_label", "")).contains("Moto") else "TAXI")
         return
     if is_instance_valid(vehicle) and player.global_position.distance_to(vehicle.global_position) <= 3.8:
         action_button.text = "MONTER SUR LA MOTO"
