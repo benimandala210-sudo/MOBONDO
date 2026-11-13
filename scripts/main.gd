@@ -1764,6 +1764,10 @@ func _play_start_transition() -> void:
     fade_out.tween_property(veil, "modulate:a", 0.0, 0.65)
     await fade_out.finished
 
+    if selected_mode == "histoire" and is_instance_valid(needs_manager) and needs_manager.health <= 0.0:
+        needs_manager.receive_treatment(60.0)
+        status_label.text = "Santé restaurée après une interruption précédente. Tu peux reprendre l'épisode."
+
     player.set_physics_process(true)
     game_ui_layer.visible = true
     crime_button.visible = selected_mode == "histoire"
@@ -2209,7 +2213,7 @@ func _on_needs_updated(hunger: float, thirst: float, energy: float, health: floa
     ]
     if is_instance_valid(needs_message_label):
         needs_message_label.text = needs_manager.get_summary()
-    if health <= 0.0 and selected_mode == "histoire":
+    if health <= 0.0 and selected_mode == "histoire" and not menu_active and not mission_ending_active and is_instance_valid(mission_manager) and mission_manager.is_mission_active():
         trigger_player_death()
 
 func _setup_dialogue_ui(layer: CanvasLayer) -> void:
