@@ -1727,6 +1727,8 @@ func _commit_street_offense() -> void:
     if not is_instance_valid(reputation_manager) or not reputation_manager.record_offense("provocation", witnessed):
         return
     street_action_cooldown = 8.0
+    if is_instance_valid(mission_manager) and mission_manager.is_mission_active() and mission_manager.get_current_objective_id() == "make_scandal":
+        mission_manager.complete_objective("make_scandal")
     status_label.text = "Scandale vu par les habitants : la PNC peut intervenir." if witnessed else "Scandale sans témoin proche : la pression policière augmente moins."
 
 func _on_police_message(message: String) -> void:
