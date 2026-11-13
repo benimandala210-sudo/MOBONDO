@@ -40,6 +40,8 @@ func set_vehicle_target(vehicle_ref: Node3D) -> void:
     vehicle_target = vehicle_ref
 
 func set_active(value: bool) -> void:
+    if value and not active:
+        arrest_in_progress = false
     active = value
     if not active:
         for officer in officers:
