@@ -2505,7 +2505,15 @@ func _try_talk_to_nearby_npc() -> bool:
             closest_id = str(person.get_meta("character_id"))
     if closest_id.is_empty():
         return false
-    return dialogue_manager.start_dialogue(closest_id)
+    var opening_override := ""
+    if is_instance_valid(reputation_manager):
+        if reputation_manager.wanted_level >= 3:
+            opening_override = "Ndeko, tika ngai na kimia. Nayoki ete PNC ezali koluka yo. Nakoki kokota na makambo wana te."
+        elif reputation_manager.street_reputation >= 60:
+            opening_override = "Ah, yo nde moto oyo bato bazali kolobela! Nayebi kombo na yo. Tokosolola, kasi nazali na posa ya mikakatano te."
+        elif reputation_manager.street_reputation >= 35:
+            opening_override = "Ndeko, nayoki makambo na yo na quartier. Tosolola na kimia, nalingi te mikakatano."
+    return dialogue_manager.start_dialogue(closest_id, opening_override)
 
 func _refresh_mission() -> void:
     if not is_instance_valid(mission_manager):
