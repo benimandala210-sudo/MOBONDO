@@ -7,6 +7,7 @@ const ECONOMY_MANAGER_SCRIPT = preload("res://scripts/economy_manager.gd")
 const NEEDS_MANAGER_SCRIPT = preload("res://scripts/needs_manager.gd")
 const REPUTATION_MANAGER_SCRIPT = preload("res://scripts/reputation_manager.gd")
 const VEHICLE_CONTROLLER_SCRIPT = preload("res://scripts/vehicle_controller.gd")
+const POLICE_MANAGER_SCRIPT = preload("res://scripts/police_manager.gd")
 const MOBONDO_EMBLEM_SCRIPT = preload("res://scripts/mobondo_emblem.gd")
 const SAVE_PATH := "user://mobondo_save.json"
 
@@ -17,6 +18,7 @@ var dialogue_manager
 var economy_manager
 var needs_manager
 var reputation_manager
+var police_manager
 var reputation_label: Label
 var vehicle
 var vehicle_label: Label
@@ -46,6 +48,8 @@ var mission_next_button: Button
 var mission_ending_active := false
 var mission_checkpoint_position := Vector3(0, 1, 0)
 var action_button: Button
+var crime_button: Button
+var street_action_cooldown := 0.0
 var transport_panel: PanelContainer
 var transport_vehicle: Node3D
 var public_transport_occupied := false
@@ -117,6 +121,10 @@ func _ready() -> void:
     reputation_manager = REPUTATION_MANAGER_SCRIPT.new()
     reputation_manager.reputation_updated.connect(_on_reputation_updated)
     add_child(reputation_manager)
+    police_manager = POLICE_MANAGER_SCRIPT.new()
+    add_child(police_manager)
+    police_manager.configure(player, reputation_manager, Callable(self, "trigger_player_arrest"))
+    police_manager.police_message.connect(_on_police_message)
     _load_world_state()
     if is_instance_valid(continue_button):
         continue_button.visible = has_saved_world
@@ -144,6 +152,12 @@ func _refresh_work_progress_label() -> void:
 func _process(delta: float) -> void:
     menu_time += delta
     _animate_street_life(delta)
+    street_action_cooldown = maxf(0.0, street_action_cooldown - delta)
+    if is_instance_valid(crime_button):
+        crime_button.disabled = street_action_cooldown > 0.0
+    if is_instance_valid(police_manager):
+        police_manager.set_active(not menu_active and selected_mode == "histoire" and not mission_ending_active and is_instance_valid(mission_manager) and mission_manager.is_mission_active())
+        police_manager.set_player_vehicle_state(vehicle_occupied, absf(float(vehicle.current_speed)) * 3.6 if is_instance_valid(vehicle) else 0.0)
     _update_world_clock(delta)
     if is_instance_valid(camera):
         if menu_active:
@@ -1351,6 +1365,19 @@ func _setup_ui() -> void:
     action_button.pressed.connect(_perform_action)
     controls.add_child(action_button)
 
+    crime_button = Button.new()
+    crime_button.text = "SCANDALE"
+    crime_button.custom_minimum_size = Vector2(142, 52)
+    crime_button.anchor_left = 1.0
+    crime_button.anchor_right = 1.0
+    crime_button.offset_left = -158
+    crime_button.offset_right = -16
+    crime_button.offset_top = 16
+    crime_button.offset_bottom = 68
+    crime_button.visible = false
+    crime_button.pressed.connect(_commit_street_offense)
+    layer.add_child(crime_button)
+
     _setup_dialogue_ui(layer)
     _setup_market_ui(layer)
     _setup_needs_ui(layer)
@@ -1632,6 +1659,7 @@ func _play_start_transition() -> void:
 
     player.set_physics_process(true)
     game_ui_layer.visible = true
+    crime_button.visible = selected_mode == "histoire"
     transition_layer.queue_free()
     transition_active = false
 
@@ -1681,6 +1709,18 @@ func _setup_mission_ending_ui(layer: CanvasLayer) -> void:
     mission_next_button.pressed.connect(_on_next_episode_pressed)
     column.add_child(mission_next_button)
 
+
+func _commit_street_offense() -> void:
+    if menu_active or selected_mode != "histoire" or street_action_cooldown > 0.0:
+        return
+    if not is_instance_valid(reputation_manager) or not reputation_manager.record_offense("provocation", true):
+        return
+    street_action_cooldown = 8.0
+    status_label.text = "Scandale public : les témoins peuvent alerter la PNC. Reste vigilant."
+
+func _on_police_message(message: String) -> void:
+    if is_instance_valid(status_label) and not mission_ending_active:
+        status_label.text = message
 
 func trigger_player_arrest() -> void:
     if selected_mode != "histoire" or not is_instance_valid(mission_manager) or not mission_manager.is_mission_active():
