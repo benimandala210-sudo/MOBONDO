@@ -8,6 +8,7 @@ const NEEDS_MANAGER_SCRIPT = preload("res://scripts/needs_manager.gd")
 const REPUTATION_MANAGER_SCRIPT = preload("res://scripts/reputation_manager.gd")
 const VEHICLE_CONTROLLER_SCRIPT = preload("res://scripts/vehicle_controller.gd")
 const POLICE_MANAGER_SCRIPT = preload("res://scripts/police_manager.gd")
+const SERVICE_NATIONAL_SCRIPT = preload("res://scripts/service_national_manager.gd")
 const MOBONDO_EMBLEM_SCRIPT = preload("res://scripts/mobondo_emblem.gd")
 const SAVE_PATH := "user://mobondo_save.json"
 
@@ -330,6 +331,9 @@ func _setup_world() -> void:
     _create_rais_railway_remains()
     _create_mapela_street_directory()
     _create_pedestrians()
+    var service_national := SERVICE_NATIONAL_SCRIPT.new()
+    service_national.name = "ServiceNationalBat iss eurs".replace(" ", "")
+    add_child(service_national)
     _create_menu_taxi()
     _setup_traffic()
 
