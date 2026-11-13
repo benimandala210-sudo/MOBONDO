@@ -112,3 +112,7 @@ Si la réponse est non, la fonctionnalité doit être repensée, reportée ou é
 ---
 
 **Règle de conduite du projet :** ne jamais confondre une fonctionnalité en cours avec la vision entière de MOBONDO. Chaque développement doit contribuer à un monde ouvert vivant où le joueur peut travailler, aimer, apprendre, entreprendre, se déplacer, se reposer, rencontrer des gens et écrire librement sa propre histoire.
+
+
+## 10. Représentation des affrontements de rue
+Les affrontements du quartier doivent refléter les éléments signalés lors de la conception terrain : machettes, pierres et lames de type Gillette peuvent apparaître comme armes de jeu. Leur présence doit être identifiable dans les choix d'équipement et les animations, sans glorification ni représentation graphique des blessures. Les mécaniques restent abstraites et ludiques : portée, disponibilité, temps de récupération, dégâts non graphiques et conséquences sur la santé, la réputation, les témoins et l'attention policière. Cette représentation ne constitue pas un guide d'utilisation réelle des armes.
