@@ -22,7 +22,7 @@ func advance(game_minutes: float) -> void:
     energy = maxf(0.0, energy - 0.032 * game_minutes)
     hygiene = maxf(0.0, hygiene - 0.012 * game_minutes)
     if hunger <= 5.0 or thirst <= 5.0:
-        health = maxf(1.0, health - 0.035 * game_minutes)
+        health = maxf(0.0, health - 0.035 * game_minutes)
     elif hunger > 35.0 and thirst > 35.0:
         health = minf(100.0, health + 0.004 * game_minutes)
     save_minutes += game_minutes
@@ -73,7 +73,7 @@ func sleep(hours: float = 8.0) -> float:
     hygiene = maxf(0.0, hygiene - 0.012 * duration)
     energy = minf(100.0, energy + duration * 0.18)
     if hunger <= 5.0 or thirst <= 5.0:
-        health = maxf(1.0, health - 0.035 * duration)
+        health = maxf(0.0, health - 0.035 * duration)
     else:
         health = minf(100.0, health + duration * 0.018)
     save_state()
@@ -113,7 +113,7 @@ func _load_state() -> void:
     hunger = clampf(float(parsed.get("hunger", hunger)), 0.0, 100.0)
     thirst = clampf(float(parsed.get("thirst", thirst)), 0.0, 100.0)
     energy = clampf(float(parsed.get("energy", energy)), 0.0, 100.0)
-    health = clampf(float(parsed.get("health", health)), 1.0, 100.0)
+    health = clampf(float(parsed.get("health", health)), 0.0, 100.0)
     hygiene = clampf(float(parsed.get("hygiene", hygiene)), 0.0, 100.0)
 
 func _emit_update() -> void:
