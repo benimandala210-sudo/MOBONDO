@@ -1,5 +1,5 @@
 extends CharacterBody3D
-## Moto jouable : conduite arcade adaptée aux commandes tactiles.
+## Véhicules jouables : conduite arcade moto et voiture adaptée aux commandes tactiles.
 signal vehicle_state_changed(speed_kmh: int, fuel: float)
 
 @export var acceleration := 8.0
