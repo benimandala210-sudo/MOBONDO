@@ -42,6 +42,7 @@ var status_label: Label
 var mission_ending_layer: Control
 var mission_ending_title_label: Label
 var mission_ending_detail_label: Label
+var mission_next_button: Button
 var mission_ending_active := false
 var mission_checkpoint_position := Vector3(0, 1, 0)
 var action_button: Button
@@ -1674,6 +1675,12 @@ func _setup_mission_ending_ui(layer: CanvasLayer) -> void:
     mission_ending_detail_label.add_theme_font_size_override("font_size", 17)
     column.add_child(mission_ending_detail_label)
 
+    mission_next_button = Button.new()
+    mission_next_button.text = "COMMENCER L'ÉPISODE SUIVANT"
+    mission_next_button.visible = false
+    mission_next_button.pressed.connect(_on_next_episode_pressed)
+    column.add_child(mission_next_button)
+
 
 func trigger_player_arrest() -> void:
     if selected_mode != "histoire" or not is_instance_valid(mission_manager) or not mission_manager.is_mission_active():
@@ -1704,6 +1711,7 @@ func _on_mission_ended(outcome: String, episode_title: String, reason: String, r
 
     match outcome:
         "victory":
+            mission_next_button.visible = false
             mission_ending_title_label.text = "MISSION ACCOMPLIE"
             mission_ending_title_label.add_theme_color_override("font_color", Color(0.45, 0.88, 0.58))
             mission_ending_detail_label.text = "%s\nObjectif principal atteint. Récompense prévue : %d FC.\nL'épisode suivant est maintenant débloqué." % [episode_title, reward]
@@ -1723,6 +1731,13 @@ func _on_mission_ended(outcome: String, episode_title: String, reason: String, r
     if not is_instance_valid(mission_ending_layer):
         mission_ending_active = false
         return
+    if outcome == "victory":
+        mission_next_button.visible = is_instance_valid(mission_manager) and mission_manager.has_next_episode()
+        if not mission_next_button.visible:
+            mission_ending_detail_label.text += "\\nCampagne terminée."
+            mission_ending_active = false
+        return
+
     mission_ending_layer.visible = false
 
     if outcome == "arrested" or outcome == "dead":
@@ -1748,6 +1763,19 @@ func _on_mission_ended(outcome: String, episode_title: String, reason: String, r
     if is_instance_valid(player) and not menu_active:
         player.set_physics_process(true)
     mission_ending_active = false
+
+
+func _on_next_episode_pressed() -> void:
+    if not is_instance_valid(mission_manager) or not mission_manager.start_next_episode():
+        return
+    if is_instance_valid(mission_ending_layer):
+        mission_ending_layer.visible = false
+    if is_instance_valid(player) and not menu_active:
+        player.set_physics_process(true)
+    mission_ending_active = false
+    _refresh_mission()
+    if is_instance_valid(status_label):
+        status_label.text = "Nouvel épisode — l'histoire continue à Mapela–Raïs."
 
 
 func _setup_needs_ui(layer: CanvasLayer) -> void:
