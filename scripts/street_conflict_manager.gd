@@ -139,8 +139,6 @@ func player_attack() -> bool:
     if remaining <= 0:
         target.visible = false
         target.queue_free()
-        if is_instance_valid(reputation_manager):
-            reputation_manager.record_offense("fight", true)
         conflict_message.emit("Rival neutralisé. Bato ya quartier bamoni mobulu.")
     else:
         conflict_message.emit("%s utilisé. État du rival : %d/3." % [get_weapon_label(), remaining])
