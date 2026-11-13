@@ -9,6 +9,14 @@ var active := false
 var player_cooldown := 0.0
 var rivals: Array[Node3D] = []
 var rival_cooldowns: Dictionary = {}
+var weapon_order := ["machette", "pierre", "lame"]
+var selected_weapon := "machette"
+var stones_remaining := 8
+var weapon_specs := {
+    "machette": {"label": "MACHETTE", "range": 2.7, "damage": 2, "cooldown": 0.9},
+    "pierre": {"label": "PIERRE", "range": 8.0, "damage": 1, "cooldown": 1.25},
+    "lame": {"label": "GILETTE", "range": 1.8, "damage": 1, "cooldown": 0.65}
+}
 
 func configure(player_node: Node3D, needs_node, reputation_node) -> void:
     player = player_node
@@ -75,6 +83,23 @@ func create_rival(rival_name: String, spawn: Vector3, shirt_color: Color, group_
 func set_active(value: bool) -> void:
     active = value
 
+func cycle_weapon() -> String:
+    var index := weapon_order.find(selected_weapon)
+    index = (index + 1) % weapon_order.size()
+    selected_weapon = weapon_order[index]
+    conflict_message.emit("Arme sélectionnée : " + get_weapon_label())
+    return get_weapon_label()
+
+func get_weapon_label() -> String:
+    var spec: Dictionary = weapon_specs.get(selected_weapon, weapon_specs["machette"])
+    if selected_weapon == "pierre":
+        return "%s (%d)" % [str(spec["label"]), stones_remaining]
+    return str(spec["label"])
+
+func get_weapon_range() -> float:
+    var spec: Dictionary = weapon_specs.get(selected_weapon, weapon_specs["machette"])
+    return float(spec["range"])
+
 func get_nearest_rival_distance() -> float:
     if not is_instance_valid(player):
         return 9999.0
@@ -89,30 +114,36 @@ func player_attack() -> bool:
         return false
     if player_cooldown > 0.0:
         return false
+    if selected_weapon == "pierre" and stones_remaining <= 0:
+        conflict_message.emit("Ozali lisusu na mabanga te.")
+        return false
+    var spec: Dictionary = weapon_specs.get(selected_weapon, weapon_specs["machette"])
     var target: Node3D = null
-    var nearest := 2.45
+    var nearest := float(spec["range"])
     for rival in rivals:
         if not is_instance_valid(rival) or not rival.visible:
             continue
         var distance := _distance_to_player(rival)
-        if distance < nearest:
+        if distance <= nearest:
             nearest = distance
             target = rival
     if not is_instance_valid(target):
-        conflict_message.emit("Pusana penepene ya rival mpo na kobunda.")
+        conflict_message.emit("Rival azali mosika mpo na " + get_weapon_label() + ".")
         return false
-    player_cooldown = 0.72
+    player_cooldown = float(spec["cooldown"])
+    if selected_weapon == "pierre":
+        stones_remaining -= 1
     _alert_group(str(target.get_meta("group_id", "groupe_mapela")))
-    var remaining := maxi(0, int(target.get_meta("health", 3)) - 1)
+    var remaining := maxi(0, int(target.get_meta("health", 3)) - int(spec["damage"]))
     target.set_meta("health", remaining)
     if remaining <= 0:
         target.visible = false
         target.queue_free()
         if is_instance_valid(reputation_manager):
             reputation_manager.record_offense("fight", true)
-        conflict_message.emit("Rival akwei na mabele. Bato ya quartier bamoni mobulu.")
+        conflict_message.emit("Rival neutralisé. Bato ya quartier bamoni mobulu.")
     else:
-        conflict_message.emit("Obeti rival. Makasi na ye etikali %d/3." % remaining)
+        conflict_message.emit("%s utilisé. État du rival : %d/3." % [get_weapon_label(), remaining])
     return true
 
 func _alert_group(group_id: String) -> void:
