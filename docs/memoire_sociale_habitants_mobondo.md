@@ -23,7 +23,7 @@ Les témoins sont enregistrés dans les rayons de détection déjà utilisés pa
 
 - La peur et l'hostilité sont persistantes dans la sauvegarde locale ; elles ne diminuent pas encore avec le temps.
 - Les témoins sont les personnages possédant un identifiant de dialogue ; les figurants sans identité sociale ne conservent pas encore de mémoire individuelle.
-- Les représailles immédiates des groupes rivaux restent gérées par le système d'affrontement existant. Une mémoire durable des rivalités entre groupes et des représailles lors des visites ultérieures reste à développer.
+- Lorsqu'un groupe rival est alerté, sa rancune reste mémorisée pendant 30 secondes de jeu actif. S'il perd de vue le joueur, il ne poursuit pas à travers toute la carte, mais conserve son hostilité et peut reprendre la poursuite si le joueur revient à portée. Cette mémoire est sauvegardée localement et le compte à rebours est suspendu lorsque le gameplay est inactif.
 - Les interactions sociales sont principalement représentées par des déplacements simples, des refus et des ouvertures de dialogue ; les animations faciales et vocales restent à produire.
 - Cette tranche a été vérifiée statiquement dans les fichiers source, mais n'a pas encore été compilée par Godot ni testée sur Android.
 
