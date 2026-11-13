@@ -247,6 +247,7 @@ func _save_world_state() -> void:
             "z": vehicle.global_position.z
         },
         "vehicle_fuel": vehicle.get_fuel(),
+        "vehicle_type": str(vehicle.vehicle_type),
         "vehicle_is_stolen": vehicle_is_stolen,
         "world_minutes": world_minutes,
         "camera_yaw": camera_yaw,
@@ -282,6 +283,15 @@ func _load_world_state() -> void:
     world_minutes = fposmod(float(parsed.get("world_minutes", world_minutes)), 1440.0)
     camera_yaw = float(parsed.get("camera_yaw", camera_yaw))
     camera_pitch = clampf(float(parsed.get("camera_pitch", camera_pitch)), -0.12, 0.62)
+    vehicle_is_stolen = bool(parsed.get("vehicle_is_stolen", false))
+    var saved_vehicle_type := str(parsed.get("vehicle_type", "moto"))
+    if vehicle_is_stolen and saved_vehicle_type == "voiture" and is_instance_valid(vehicle) and str(vehicle.vehicle_type) != "voiture":
+        var old_vehicle = vehicle
+        vehicle = _create_vehicle_controller("voiture", saved_vehicle_position)
+        if is_instance_valid(old_vehicle):
+            old_vehicle.queue_free()
+        if is_instance_valid(police_manager):
+            police_manager.set_vehicle_target(vehicle)
     var vehicle_data = parsed.get("vehicle_position", {})
     if vehicle_data is Dictionary and is_instance_valid(vehicle):
         saved_vehicle_position = Vector3(
@@ -292,9 +302,10 @@ func _load_world_state() -> void:
         vehicle.global_position = saved_vehicle_position
         saved_vehicle_fuel = clampf(float(parsed.get("vehicle_fuel", 100.0)), 0.0, 100.0)
         vehicle.refuel(saved_vehicle_fuel - vehicle.get_fuel())
-    vehicle_is_stolen = bool(parsed.get("vehicle_is_stolen", false))
-    if vehicle_is_stolen and not stealable_vehicles.is_empty() and is_instance_valid(stealable_vehicles[0]):
-        stealable_vehicles[0].visible = false
+    if vehicle_is_stolen:
+        for parked_target in stealable_vehicles:
+            if is_instance_valid(parked_target) and str(parked_target.get_meta("vehicle_type", "")) == saved_vehicle_type:
+                parked_target.visible = false
     var loaded_mode := str(parsed.get("selected_mode", "histoire"))
     if loaded_mode == "histoire" or loaded_mode == "libre":
         selected_mode = loaded_mode
@@ -1056,6 +1067,15 @@ func _setup_traffic() -> void:
             parked_moto.set_meta("stealable", true)
             parked_moto.set_meta("vehicle_type", "moto")
             stealable_vehicles.append(parked_moto)
+        var parked_car: Node3D = menu_taxi.duplicate() as Node3D
+        if parked_car != null:
+            parked_car.name = "Voiture stationnée — véhicule volable"
+            add_child(parked_car)
+            parked_car.position = Vector3(-4.2, 0.0, -26.0)
+            parked_car.rotation.y = PI
+            parked_car.set_meta("stealable", true)
+            parked_car.set_meta("vehicle_type", "voiture")
+            stealable_vehicles.append(parked_car)
 
 func _register_traffic_vehicle(vehicle: Node3D, lane_x: float, start_z: float, direction: float, speed: float, label: String) -> void:
     vehicle.position = Vector3(lane_x, 0.0, start_z)
@@ -1346,7 +1366,7 @@ func _setup_ui() -> void:
     needs_label.add_theme_font_size_override("font_size", 12)
     column.add_child(needs_label)
     vehicle_label = Label.new()
-    vehicle_label.text = "Moto : stationnée"
+    vehicle_label.text = "Véhicule : stationné"
     vehicle_label.visible = false
     column.add_child(vehicle_label)
 
@@ -2247,7 +2267,8 @@ func _set_run_control(pressed: bool) -> void:
 
 func _on_vehicle_state_changed(speed_kmh: int, fuel: float) -> void:
     if is_instance_valid(vehicle_label):
-        vehicle_label.text = "MOTO  %d km/h  |  Carburant %d%%" % [speed_kmh, roundi(fuel)]
+        var type_label := "VOITURE" if is_instance_valid(vehicle) and str(vehicle.vehicle_type) == "voiture" else "MOTO"
+        vehicle_label.text = "%s  %d km/h  |  Carburant %d%%" % [type_label, speed_kmh, roundi(fuel)]
 
 func _setup_transport_ui(layer: CanvasLayer) -> void:
     transport_panel = PanelContainer.new()
@@ -2439,7 +2460,7 @@ func _update_nearby_npc_hint() -> void:
         return
     var parked_target := _get_nearby_stealable_vehicle()
     if is_instance_valid(parked_target):
-        action_button.text = "TENTER VOL MOTO"
+        action_button.text = "TENTER VOL " + ("VOITURE" if str(parked_target.get_meta("vehicle_type", "moto")) == "voiture" else "MOTO")
         return
     if is_instance_valid(vehicle) and player.global_position.distance_to(vehicle.global_position) <= 3.8:
         action_button.text = "MONTER SUR LA MOTO"
@@ -2487,14 +2508,11 @@ func _steal_nearby_vehicle(target: Node3D) -> void:
     if not is_instance_valid(reputation_manager) or not reputation_manager.record_offense("vehicle_theft", witnessed):
         status_label.text = "Vol impossible pour le moment."
         return
-    var stolen_controller = VEHICLE_CONTROLLER_SCRIPT.new()
+    var stolen_type := str(target.get_meta("vehicle_type", "moto"))
+    var stolen_controller := _create_vehicle_controller(stolen_type, target.global_position)
     if not is_instance_valid(stolen_controller):
         status_label.text = "Le véhicule ne peut pas être pris."
         return
-    stolen_controller.name = "MotoVoleeJoueur"
-    add_child(stolen_controller)
-    stolen_controller.global_position = target.global_position
-    stolen_controller.vehicle_state_changed.connect(_on_vehicle_state_changed)
     var previous_vehicle = vehicle
     vehicle = stolen_controller
     if is_instance_valid(previous_vehicle):
@@ -2504,9 +2522,21 @@ func _steal_nearby_vehicle(target: Node3D) -> void:
     vehicle_is_stolen = true
     if is_instance_valid(police_manager):
         police_manager.set_vehicle_target(vehicle)
-    status_label.text = "Moto volée.  + ("Des témoins peuvent prévenir la PNC." if witnessed else "Personne à proximité ne semble avoir vu le vol.")
+    var vehicle_label_text := "Voiture" if stolen_type == "voiture" else "Moto"
+    status_label.text = vehicle_label_text + " volée. " + ("Des témoins peuvent prévenir la PNC." if witnessed else "Personne à proximité ne semble avoir vu le vol.")
     _mount_vehicle()
     _save_world_state()
+
+func _create_vehicle_controller(type: String, spawn_position: Vector3) -> CharacterBody3D:
+    var controller := CharacterBody3D.new()
+    controller.set_script(VEHICLE_CONTROLLER_SCRIPT)
+    controller.vehicle_type = "voiture" if type == "voiture" else "moto"
+    controller.name = "VoitureVoleeJoueur" if controller.vehicle_type == "voiture" else "MotoVoleeJoueur"
+    controller.global_position = spawn_position
+    controller.set_physics_process(false)
+    controller.vehicle_state_changed.connect(_on_vehicle_state_changed)
+    add_child(controller)
+    return controller
 
 func _get_nearby_service() -> Dictionary:
     if not is_instance_valid(player) or vehicle_occupied:
@@ -2573,7 +2603,7 @@ func _mount_vehicle() -> void:
     vehicle_label.visible = true
     run_button.text = "GAZ"
     action_button.text = "DESCENDRE"
-    status_label.text = "Ozali na moto. Utilise les flèches pour diriger et GAZ pour accélérer."
+    status_label.text = ("Ozali na voiture." if str(vehicle.vehicle_type) == "voiture" else "Ozali na moto.") + " Utilise les flèches pour diriger et GAZ pour accélérer."
 
 func _dismount_vehicle() -> void:
     if not is_instance_valid(vehicle) or not vehicle_occupied:
@@ -2596,7 +2626,7 @@ func _refuel_vehicle() -> void:
         return
     if economy_manager.use_item("carburant"):
         vehicle.refuel(55.0)
-        needs_message_label.text = "Moto etondi lisusu carburant."
+        needs_message_label.text = ("Voiture" if str(vehicle.vehicle_type) == "voiture" else "Moto") + " etondi lisusu carburant."
     else:
         needs_message_label.text = "Somba carburant na zando liboso."
 
