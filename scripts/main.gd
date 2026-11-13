@@ -123,7 +123,7 @@ func _ready() -> void:
     add_child(reputation_manager)
     police_manager = POLICE_MANAGER_SCRIPT.new()
     add_child(police_manager)
-    police_manager.configure(player, reputation_manager, Callable(self, "trigger_player_arrest"))
+    police_manager.configure(player, reputation_manager, Callable(self, "trigger_player_arrest"), vehicle)
     police_manager.police_message.connect(_on_police_message)
     _load_world_state()
     if is_instance_valid(continue_button):
@@ -1748,6 +1748,13 @@ func _on_mission_ended(outcome: String, episode_title: String, reason: String, r
             player.visible = false
     if is_instance_valid(vehicle):
         vehicle.set_physics_process(false)
+        if vehicle_occupied:
+            vehicle.dismount()
+            vehicle_occupied = false
+    if is_instance_valid(player):
+        var arrest_collision := player.get_node_or_null("CollisionShape3D") as CollisionShape3D
+        if is_instance_valid(arrest_collision):
+            arrest_collision.set_deferred("disabled", false)
 
     match outcome:
         "victory":
