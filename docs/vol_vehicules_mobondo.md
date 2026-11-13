@@ -22,3 +22,13 @@ Une moto fictive est stationnée en bordure de la voie de Mapela. Elle est disti
 - Pas encore de serrure, de mini-jeu de démarrage, d'alarme sonore, de propriétaire qui poursuit le joueur, ni de système de plaques.
 - Les témoins sont actuellement détectés par proximité ; ils ne passent pas encore un appel à la police.
 - Aucun test de compilation Godot ni test Android n'a encore été exécuté pour cette modification.
+
+
+## Deuxième tranche — voiture volable
+- Une voiture stationnée distincte des taxis en circulation est placée près de la moto volable à Mapela.
+- Le bouton d'action indique « TENTER VOL VOITURE » lorsque le joueur est à portée.
+- Le vol remplace le véhicule pilotable par un contrôleur automobile dédié, avec carrosserie, roues, collision et réglages de conduite distincts.
+- Les commandes tactiles directionnelles, accélération, freinage, carburant, descente et poursuite PNC réutilisent l'interface commune.
+- La sauvegarde enregistre le type de véhicule ; au chargement, une voiture volée est recréée comme voiture et la cible stationnée correspondante est masquée.
+- Les témoins sont détectés par proximité et l'incident est transmis au système de réputation/PNC ; aucun appel téléphonique simulé n'est encore implémenté.
+- Cette tranche est enregistrée dans le dépôt mais n'a pas encore été compilée par Godot ni testée sur Android.
