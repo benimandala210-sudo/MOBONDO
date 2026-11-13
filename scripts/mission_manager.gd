@@ -27,6 +27,7 @@ const EPISODES := [
         "available": true,
         "objectives": [
             {"id": "reach_market", "title": "Kende na zando", "description": "Kende pene ya zando ya Mapela.", "optional": false},
+            {"id": "make_scandal", "title": "Lakisa ete ozali kobanga moto te", "description": "Salá scandale na balabala mpo bato ya quartier báyeba kombo na yo.", "optional": false},
             {"id": "talk_resident", "title": "Solola na moto ya quartier", "description": "Pusana pene ya moto ya quartier mpe solola na ye.", "optional": false},
             {"id": "collect_parcel", "title": "Kamata colis", "description": "Kende kozwa colis oyo batikelaki yo.", "optional": false}
         ]
