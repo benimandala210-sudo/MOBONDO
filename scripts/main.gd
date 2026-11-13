@@ -2377,13 +2377,13 @@ func _perform_action() -> void:
     if public_transport_occupied:
         status_label.text = "Ozali na mobembo. Taxi ezali kokende na esika oponaki."
         return
-    var parked_target := _get_nearby_stealable_vehicle()
-    if is_instance_valid(parked_target):
-        _steal_nearby_vehicle(parked_target)
-        return
     var nearby_transport := _find_nearby_public_transport()
     if is_instance_valid(nearby_transport):
         _open_transport_menu(nearby_transport)
+        return
+    var parked_target := _get_nearby_stealable_vehicle()
+    if is_instance_valid(parked_target):
+        _steal_nearby_vehicle(parked_target)
         return
     if vehicle_occupied:
         _dismount_vehicle()
