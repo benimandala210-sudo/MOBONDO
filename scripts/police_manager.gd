@@ -22,6 +22,11 @@ var player_in_vehicle := false
 var vehicle_speed_kmh := 0.0
 var message_cooldown := 0.0
 var arrest_in_progress := false
+var patrol_motorcycle: Node3D
+var motorcycle_route: Array[Vector3] = [Vector3(0.0, 0.0, -8.0), Vector3(0.0, 0.0, -36.0), Vector3(0.0, 0.0, -56.0), Vector3(0.0, 0.0, -36.0)]
+var motorcycle_route_index := 1
+var motorcycle_state := "patrol"
+var motorcycle_search_timer := 0.0
 
 func configure(player_ref: CharacterBody3D, reputation_ref: Node, arrest_action: Callable, vehicle_ref: Node3D = null) -> void:
     player = player_ref
@@ -29,6 +34,7 @@ func configure(player_ref: CharacterBody3D, reputation_ref: Node, arrest_action:
     arrest_callback = arrest_action
     vehicle_target = vehicle_ref
     _create_patrol_officers()
+    _create_motorized_patrol()
 
 func set_active(value: bool) -> void:
     active = value
@@ -37,6 +43,8 @@ func set_active(value: bool) -> void:
             if is_instance_valid(officer) and str(officer.get_meta("state", "patrol")) == "pursuit":
                 officer.set_meta("state", "patrol")
                 officer.set_meta("search_timer", 0.0)
+        motorcycle_state = "patrol"
+        motorcycle_search_timer = 0.0
 
 func set_player_vehicle_state(occupied: bool, speed_kmh: float = 0.0) -> void:
     player_in_vehicle = occupied
@@ -89,6 +97,83 @@ func _process(delta: float) -> void:
                         arrest_callback.call()
                     set_active(false)
                     return
+    _update_motorized_patrol(delta, wanted)
+
+func _create_motorized_patrol() -> void:
+    if is_instance_valid(patrol_motorcycle):
+        return
+    patrol_motorcycle = _build_patrol_motorcycle()
+    patrol_motorcycle.position = motorcycle_route[0]
+    patrol_motorcycle.set_meta("state", "patrol")
+    add_child(patrol_motorcycle)
+
+func _update_motorized_patrol(delta: float, wanted: int) -> void:
+    if not is_instance_valid(patrol_motorcycle):
+        return
+    var target_position := vehicle_target.global_position if player_in_vehicle and is_instance_valid(vehicle_target) else player.global_position
+    var distance := Vector2(patrol_motorcycle.global_position.x - target_position.x, patrol_motorcycle.global_position.z - target_position.z).length()
+    if wanted > 0 and distance <= 14.0 + float(wanted) * 3.0:
+        if motorcycle_state != "pursuit":
+            motorcycle_state = "pursuit"
+            motorcycle_search_timer = 0.0
+            _announce("PNC : une patrouille motorisée rejoint l'intervention.")
+        if distance > 45.0:
+            motorcycle_search_timer += delta
+            if motorcycle_search_timer > 14.0:
+                motorcycle_state = "patrol"
+                motorcycle_search_timer = 0.0
+                _announce("La patrouille motorisée a perdu ta trace.")
+        else:
+            motorcycle_search_timer = 0.0
+        if motorcycle_state == "pursuit":
+            var chase_target := target_position
+            chase_target.y = 0.0
+            patrol_motorcycle.position = patrol_motorcycle.position.move_toward(chase_target, (5.0 + float(wanted) * 0.75) * delta)
+            _face_target(patrol_motorcycle, chase_target)
+            if distance <= 2.3 and (not player_in_vehicle or vehicle_speed_kmh <= 3.0):
+                if not arrest_in_progress:
+                    arrest_in_progress = true
+                    _announce("PNC : la patrouille motorisée procède à l'interpellation.")
+                    if arrest_callback.is_valid():
+                        arrest_callback.call()
+                    set_active(false)
+                    return
+    if motorcycle_state == "patrol":
+        var route_target: Vector3 = motorcycle_route[motorcycle_route_index]
+        patrol_motorcycle.position = patrol_motorcycle.position.move_toward(route_target, 4.0 * delta)
+        _face_target(patrol_motorcycle, route_target)
+        if patrol_motorcycle.position.distance_to(route_target) < 0.5:
+            motorcycle_route_index = (motorcycle_route_index + 1) % motorcycle_route.size()
+
+func _build_patrol_motorcycle() -> Node3D:
+    var root := Node3D.new()
+    root.name = "Moto de patrouille PNC"
+    _add_box(root, "Carénage bleu nuit", Vector3(0, 0.76, 0), Vector3(0.58, 0.4, 1.15), UNIFORM_BLUE)
+    _add_box(root, "Réservoir PNC", Vector3(0, 1.02, -0.1), Vector3(0.48, 0.3, 0.5), TROUSER_BLUE)
+    _add_box(root, "Selle moto PNC", Vector3(0, 1.0, 0.38), Vector3(0.4, 0.15, 0.55), BELT_BLACK)
+    _add_box(root, "Phare moto PNC", Vector3(0, 0.95, -0.63), Vector3(0.25, 0.22, 0.12), Color(0.95, 0.86, 0.58))
+    for z in [-0.62, 0.62]:
+        var wheel := MeshInstance3D.new()
+        var wheel_mesh := TorusMesh.new()
+        wheel_mesh.inner_radius = 0.2
+        wheel_mesh.outer_radius = 0.29
+        wheel.mesh = wheel_mesh
+        wheel.position = Vector3(0, 0.31, z)
+        wheel.rotation.y = PI / 2.0
+        wheel.material_override = _material(BOOT_BLACK)
+        root.add_child(wheel)
+    var rider := _build_officer("Motard PNC")
+    rider.position = Vector3(0, 0.28, 0.05)
+    rider.scale = Vector3(0.82, 0.82, 0.82)
+    root.add_child(rider)
+    var marking := Label3D.new()
+    marking.text = "PNC"
+    marking.font_size = 24
+    marking.pixel_size = 0.01
+    marking.position = Vector3(0, 1.42, -0.58)
+    marking.modulate = Color(0.95, 0.9, 0.7)
+    root.add_child(marking)
+    return root
 
 func _create_patrol_officers() -> void:
     if not officers.is_empty():
