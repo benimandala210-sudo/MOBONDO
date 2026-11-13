@@ -15,12 +15,15 @@ func configure(player_node: Node3D, needs_node, reputation_node) -> void:
     needs_manager = needs_node
     reputation_manager = reputation_node
 
-func create_rival(rival_name: String, spawn: Vector3, shirt_color: Color) -> Node3D:
+func create_rival(rival_name: String, spawn: Vector3, shirt_color: Color, group_id: String = "groupe_mapela") -> Node3D:
     var rival := Node3D.new()
     rival.name = rival_name
     rival.position = spawn
     rival.set_meta("health", 3)
     rival.set_meta("state", "idle")
+    rival.set_meta("group_id", group_id)
+    rival.set_meta("group_alerted", false)
+    rival.set_meta("alert_time", 0.0)
     var shirt := StandardMaterial3D.new()
     shirt.albedo_color = shirt_color
     var skin := StandardMaterial3D.new()
@@ -99,6 +102,7 @@ func player_attack() -> bool:
         conflict_message.emit("Pusana penepene ya rival mpo na kobunda.")
         return false
     player_cooldown = 0.72
+    _alert_group(str(target.get_meta("group_id", "groupe_mapela")))
     var remaining := maxi(0, int(target.get_meta("health", 3)) - 1)
     target.set_meta("health", remaining)
     if remaining <= 0:
@@ -110,6 +114,16 @@ func player_attack() -> bool:
     else:
         conflict_message.emit("Obeti rival. Makasi na ye etikali %d/3." % remaining)
     return true
+
+func _alert_group(group_id: String) -> void:
+    for rival in rivals:
+        if not is_instance_valid(rival) or not rival.visible:
+            continue
+        if str(rival.get_meta("group_id", "")) == group_id:
+            rival.set_meta("group_alerted", true)
+            rival.set_meta("alert_time", 15.0)
+            rival.set_meta("state", "alerted")
+    conflict_message.emit("Groupe rival alerte : ses compagnons arrivent.")
 
 func _process(delta: float) -> void:
     if player_cooldown > 0.0:
@@ -125,18 +139,29 @@ func _process(delta: float) -> void:
         var cooldown := maxf(0.0, float(rival_cooldowns.get(key, 0.0)) - delta)
         rival_cooldowns[key] = cooldown
         var distance := _distance_to_player(rival)
-        if distance <= 8.0 and distance > 1.45:
+        var alert_time := maxf(0.0, float(rival.get_meta("alert_time", 0.0)) - delta)
+        rival.set_meta("alert_time", alert_time)
+        var alerted := bool(rival.get_meta("group_alerted", false))
+        if not alerted and distance <= 3.5:
+            _alert_group(str(rival.get_meta("group_id", "groupe_mapela")))
+            alerted = true
+            alert_time = 15.0
+        if alerted and (alert_time <= 0.0 or distance > 18.0):
+            rival.set_meta("group_alerted", false)
+            rival.set_meta("state", "idle")
+            alerted = false
+        if alerted and distance > 1.45 and distance <= 18.0:
             var destination := Vector3(player.global_position.x, rival.global_position.y, player.global_position.z)
-            rival.global_position = rival.global_position.move_toward(destination, 1.65 * delta)
+            rival.global_position = rival.global_position.move_toward(destination, 1.8 * delta)
             var direction := destination - rival.global_position
             if Vector2(direction.x, direction.z).length() > 0.05:
                 rival.rotation.y = atan2(-direction.x, -direction.z)
             rival.set_meta("state", "approach")
-        elif distance <= 1.45 and cooldown <= 0.0:
+        elif alerted and distance <= 1.45 and cooldown <= 0.0:
             rival_cooldowns[key] = 2.1
             needs_manager.apply_damage(8.0)
             conflict_message.emit("%s t'a frappé. Santé diminuée." % rival.name)
-        elif distance > 8.0:
+        elif not alerted:
             rival.set_meta("state", "idle")
 
 func _distance_to_player(rival: Node3D) -> float:
