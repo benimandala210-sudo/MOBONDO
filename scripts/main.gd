@@ -1675,6 +1675,20 @@ func _setup_mission_ending_ui(layer: CanvasLayer) -> void:
     column.add_child(mission_ending_detail_label)
 
 
+func trigger_player_arrest() -> void:
+    if selected_mode != "histoire" or not is_instance_valid(mission_manager) or not mission_manager.is_mission_active():
+        return
+    if is_instance_valid(reputation_manager):
+        reputation_manager.apply_arrest()
+    mission_manager.fail_episode("La police t'a arrêté.", "arrested")
+
+
+func trigger_player_death() -> void:
+    if selected_mode != "histoire" or not is_instance_valid(mission_manager) or not mission_manager.is_mission_active():
+        return
+    mission_manager.fail_episode("Ton personnage a perdu la vie.", "dead")
+
+
 func _on_mission_ended(outcome: String, episode_title: String, reason: String, reward: int) -> void:
     if mission_ending_active or not is_instance_valid(mission_ending_layer):
         return
@@ -1683,6 +1697,8 @@ func _on_mission_ended(outcome: String, episode_title: String, reason: String, r
     if is_instance_valid(player):
         player.set_physics_process(false)
         player.velocity = Vector3.ZERO
+        if outcome == "arrested" or outcome == "dead":
+            player.visible = false
     if is_instance_valid(vehicle):
         vehicle.set_physics_process(false)
 
@@ -1710,8 +1726,13 @@ func _on_mission_ended(outcome: String, episode_title: String, reason: String, r
     mission_ending_layer.visible = false
 
     if outcome == "arrested" or outcome == "dead":
+        if outcome == "arrested" and is_instance_valid(reputation_manager):
+            var remaining_detention: int = reputation_manager.detention_minutes_remaining
+            if remaining_detention > 0:
+                _update_world_clock(float(remaining_detention))
         if is_instance_valid(player):
             player.global_position = mission_checkpoint_position
+            player.visible = true
             player.velocity = Vector3.ZERO
         if is_instance_valid(vehicle):
             vehicle.set_physics_process(false)
