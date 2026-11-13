@@ -1730,6 +1730,8 @@ func _on_mission_ended(outcome: String, episode_title: String, reason: String, r
             var remaining_detention: int = reputation_manager.detention_minutes_remaining
             if remaining_detention > 0:
                 _update_world_clock(float(remaining_detention))
+        if outcome == "dead" and is_instance_valid(needs_manager):
+            needs_manager.receive_treatment(60.0)
         if is_instance_valid(player):
             player.global_position = mission_checkpoint_position
             player.visible = true
@@ -1851,6 +1853,8 @@ func _on_needs_updated(hunger: float, thirst: float, energy: float, health: floa
     ]
     if is_instance_valid(needs_message_label):
         needs_message_label.text = needs_manager.get_summary()
+    if health <= 0.0 and selected_mode == "histoire":
+        trigger_player_death()
 
 func _setup_dialogue_ui(layer: CanvasLayer) -> void:
     dialogue_panel = PanelContainer.new()
