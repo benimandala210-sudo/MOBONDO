@@ -229,6 +229,10 @@ func restart_episode() -> bool:
     _emit_current_mission()
     return true
 
+func has_next_episode() -> bool:
+    return current_episode_index + 1 < EPISODES.size()
+
+
 func start_next_episode() -> bool:
     if mission_state != STATE_VICTORY:
         return false
