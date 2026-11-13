@@ -39,6 +39,11 @@ var dialogue_text_label: Label
 var dialogue_choices: VBoxContainer
 var mission_label: Label
 var status_label: Label
+var mission_ending_layer: Control
+var mission_ending_title_label: Label
+var mission_ending_detail_label: Label
+var mission_ending_active := false
+var mission_checkpoint_position := Vector3(0, 1, 0)
 var action_button: Button
 var transport_panel: PanelContainer
 var transport_vehicle: Node3D
@@ -97,6 +102,7 @@ func _ready() -> void:
     mission_manager.mission_completed.connect(_on_mission_completed)
     mission_manager.mission_failed.connect(_on_mission_failed)
     mission_manager.mission_message.connect(_on_mission_message)
+    mission_manager.mission_ended.connect(_on_mission_ended)
     add_child(mission_manager)
 
     dialogue_manager = DIALOGUE_MANAGER_SCRIPT.new()
@@ -1348,6 +1354,7 @@ func _setup_ui() -> void:
     _setup_market_ui(layer)
     _setup_needs_ui(layer)
     _setup_transport_ui(layer)
+    _setup_mission_ending_ui(layer)
 
 func _setup_main_menu() -> void:
     menu_layer = CanvasLayer.new()
@@ -1610,6 +1617,7 @@ func _play_start_transition() -> void:
     camera_move.tween_property(camera, "global_position", Vector3(0, 4.2, 8.2), 1.8)
     await camera_move.finished
     camera.look_at(player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
+    mission_checkpoint_position = player.global_position
 
     if selected_mode == "histoire":
         status_label.text = "MODE HISTOIRE — Tokoba na eteni ya liboso."
@@ -1625,6 +1633,98 @@ func _play_start_transition() -> void:
     game_ui_layer.visible = true
     transition_layer.queue_free()
     transition_active = false
+
+
+func _setup_mission_ending_ui(layer: CanvasLayer) -> void:
+    mission_ending_layer = Control.new()
+    mission_ending_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    mission_ending_layer.visible = false
+    mission_ending_layer.mouse_filter = Control.MOUSE_FILTER_STOP
+    layer.add_child(mission_ending_layer)
+
+    var shade := ColorRect.new()
+    shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+    shade.color = Color(0.015, 0.018, 0.025, 0.88)
+    mission_ending_layer.add_child(shade)
+
+    var panel := PanelContainer.new()
+    panel.anchor_left = 0.12
+    panel.anchor_top = 0.34
+    panel.anchor_right = 0.88
+    panel.anchor_bottom = 0.66
+    panel.offset_left = 0
+    panel.offset_top = 0
+    panel.offset_right = 0
+    panel.offset_bottom = 0
+    mission_ending_layer.add_child(panel)
+
+    var column := VBoxContainer.new()
+    column.alignment = BoxContainer.ALIGNMENT_CENTER
+    column.add_theme_constant_override("separation", 14)
+    panel.add_child(column)
+
+    mission_ending_title_label = Label.new()
+    mission_ending_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    mission_ending_title_label.add_theme_font_size_override("font_size", 30)
+    column.add_child(mission_ending_title_label)
+
+    mission_ending_detail_label = Label.new()
+    mission_ending_detail_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    mission_ending_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    mission_ending_detail_label.add_theme_font_size_override("font_size", 17)
+    column.add_child(mission_ending_detail_label)
+
+
+func _on_mission_ended(outcome: String, episode_title: String, reason: String, reward: int) -> void:
+    if mission_ending_active or not is_instance_valid(mission_ending_layer):
+        return
+    mission_ending_active = true
+    mission_ending_layer.visible = true
+    if is_instance_valid(player):
+        player.set_physics_process(false)
+        player.velocity = Vector3.ZERO
+    if is_instance_valid(vehicle):
+        vehicle.set_physics_process(false)
+
+    match outcome:
+        "victory":
+            mission_ending_title_label.text = "MISSION ACCOMPLIE"
+            mission_ending_title_label.add_theme_color_override("font_color", Color(0.45, 0.88, 0.58))
+            mission_ending_detail_label.text = "%s\nObjectif principal atteint. Récompense prévue : %d FC.\nL'épisode suivant est maintenant débloqué." % [episode_title, reward]
+        "arrested":
+            mission_ending_title_label.text = "MISSION ÉCHOUÉE — ARRESTATION"
+            mission_ending_title_label.add_theme_color_override("font_color", Color(0.95, 0.62, 0.32))
+            mission_ending_detail_label.text = "%s\n%s\nL'épisode va recommencer depuis son point de départ." % [episode_title, reason]
+        "dead":
+            mission_ending_title_label.text = "MISSION ÉCHOUÉE — JOUEUR TUÉ"
+            mission_ending_title_label.add_theme_color_override("font_color", Color(0.9, 0.3, 0.3))
+            mission_ending_detail_label.text = "%s\n%s\nL'épisode va recommencer depuis son point de départ." % [episode_title, reason]
+        _:
+            mission_ending_title_label.text = "FIN DE MISSION"
+            mission_ending_detail_label.text = reason
+
+    await get_tree().create_timer(3.2).timeout
+    if not is_instance_valid(mission_ending_layer):
+        mission_ending_active = false
+        return
+    mission_ending_layer.visible = false
+
+    if outcome == "arrested" or outcome == "dead":
+        if is_instance_valid(player):
+            player.global_position = mission_checkpoint_position
+            player.velocity = Vector3.ZERO
+        if is_instance_valid(vehicle):
+            vehicle.set_physics_process(false)
+        if is_instance_valid(mission_manager):
+            mission_manager.restart_episode()
+        if is_instance_valid(status_label):
+            status_label.text = "Nouvelle tentative — recommence l'épisode."
+    elif outcome == "victory":
+        if is_instance_valid(status_label):
+            status_label.text = "Épisode validé. Le prochain épisode est débloqué."
+    if is_instance_valid(player) and not menu_active:
+        player.set_physics_process(true)
+    mission_ending_active = false
 
 
 func _setup_needs_ui(layer: CanvasLayer) -> void:
