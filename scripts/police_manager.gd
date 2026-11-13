@@ -11,6 +11,7 @@ const SKIN_BROWN := Color(0.29, 0.16, 0.105)
 const BELT_BLACK := Color(0.025, 0.028, 0.032)
 
 var player: CharacterBody3D
+var vehicle_target: Node3D
 var reputation_manager: Node
 var arrest_callback: Callable
 var officers: Array[Node3D] = []
@@ -22,10 +23,11 @@ var vehicle_speed_kmh := 0.0
 var message_cooldown := 0.0
 var arrest_in_progress := false
 
-func configure(player_ref: CharacterBody3D, reputation_ref: Node, arrest_action: Callable) -> void:
+func configure(player_ref: CharacterBody3D, reputation_ref: Node, arrest_action: Callable, vehicle_ref: Node3D = null) -> void:
     player = player_ref
     reputation_manager = reputation_ref
     arrest_callback = arrest_action
+    vehicle_target = vehicle_ref
     _create_patrol_officers()
 
 func set_active(value: bool) -> void:
@@ -41,7 +43,7 @@ func set_player_vehicle_state(occupied: bool, speed_kmh: float = 0.0) -> void:
     vehicle_speed_kmh = absf(speed_kmh)
 
 func _process(delta: float) -> void:
-    if not active or not is_instance_valid(player) or not player.visible or not is_instance_valid(reputation_manager):
+    if not active or not is_instance_valid(player) or (not player.visible and not player_in_vehicle) or not is_instance_valid(reputation_manager):
         return
     if message_cooldown > 0.0:
         message_cooldown = maxf(0.0, message_cooldown - delta)
@@ -51,7 +53,8 @@ func _process(delta: float) -> void:
         if not is_instance_valid(officer):
             continue
         var state := str(officer.get_meta("state", "patrol"))
-        var distance := Vector2(officer.global_position.x - player.global_position.x, officer.global_position.z - player.global_position.z).length()
+        var target_position := vehicle_target.global_position if player_in_vehicle and is_instance_valid(vehicle_target) else player.global_position
+        var distance := Vector2(officer.global_position.x - target_position.x, officer.global_position.z - target_position.z).length()
         if wanted <= 0:
             if state == "pursuit":
                 officer.set_meta("state", "patrol")
@@ -146,7 +149,7 @@ func _patrol_officer(index: int, delta: float) -> void:
         officer.set_meta("route_index", (route_index + 1) % route.size())
 
 func _pursue_player(officer: Node3D, delta: float, wanted: int) -> void:
-    var target := player.global_position
+    var target := vehicle_target.global_position if player_in_vehicle and is_instance_valid(vehicle_target) else player.global_position
     target.y = 0.0
     var speed := 3.0 + float(wanted) * 0.32
     officer.position = officer.position.move_toward(target, speed * delta)
