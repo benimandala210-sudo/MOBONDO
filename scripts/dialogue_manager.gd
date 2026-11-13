@@ -107,7 +107,7 @@ var waiting_for_close: bool = false
 func _ready() -> void:
     _load_state()
 
-func start_dialogue(character_id: String) -> bool:
+func start_dialogue(character_id: String, opening_override: String = "") -> bool:
     if waiting_for_close:
         return false
     if not CONVERSATIONS.has(character_id):
@@ -118,7 +118,8 @@ func start_dialogue(character_id: String) -> bool:
     active_speaker = str(conversation.get("speaker", ""))
     active_choices = conversation.get("choices", []).duplicate(true)
     waiting_for_close = false
-    dialogue_updated.emit(active_speaker, str(conversation.get("opening", "")), active_choices)
+    var opening := str(conversation.get("opening", "")) if opening_override.is_empty() else opening_override
+    dialogue_updated.emit(active_speaker, opening, active_choices)
     return true
 
 func choose_option(index: int) -> bool:
