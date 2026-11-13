@@ -102,6 +102,7 @@ var active_choices: Array = []
 var relationship_scores: Dictionary = {}
 var story_flags: Array[String] = []
 var dialogue_history: Array[String] = []
+var npc_memories: Dictionary = {}
 var waiting_for_close: bool = false
 
 func _ready() -> void:
@@ -112,6 +113,8 @@ func start_dialogue(character_id: String, opening_override: String = "") -> bool
         return false
     if not CONVERSATIONS.has(character_id):
         return false
+    if not can_talk_to(character_id):
+        return false
 
     active_character_id = character_id
     var conversation: Dictionary = CONVERSATIONS[character_id]
@@ -119,6 +122,8 @@ func start_dialogue(character_id: String, opening_override: String = "") -> bool
     active_choices = conversation.get("choices", []).duplicate(true)
     waiting_for_close = false
     var opening := str(conversation.get("opening", "")) if opening_override.is_empty() else opening_override
+    if opening_override.is_empty():
+        opening = get_social_opening(character_id, opening)
     dialogue_updated.emit(active_speaker, opening, active_choices)
     return true
 
@@ -166,6 +171,48 @@ func close_dialogue() -> void:
     dialogue_closed.emit()
     conversation_finished.emit(character_id, last_choice_id)
 
+func record_npc_incident(character_id: String, incident_type: String, severity: int = 1) -> void:
+    if character_id.is_empty() or not CONVERSATIONS.has(character_id):
+        return
+    var memory: Dictionary = npc_memories.get(character_id, {}).duplicate(true)
+    var fear_gain := 12 * maxi(1, severity)
+    var hostility_gain := 5 * maxi(1, severity)
+    if incident_type == "vehicle_theft":
+        fear_gain += 8
+    memory["fear"] = clampi(int(memory.get("fear", 0)) + fear_gain, 0, 100)
+    memory["hostility"] = clampi(int(memory.get("hostility", 0)) + hostility_gain, 0, 100)
+    memory["incident_count"] = int(memory.get("incident_count", 0)) + 1
+    memory["last_incident"] = incident_type
+    npc_memories[character_id] = memory
+    _save_state()
+
+func get_npc_social_state(character_id: String) -> Dictionary:
+    var memory: Dictionary = npc_memories.get(character_id, {})
+    return {
+        "fear": clampi(int(memory.get("fear", 0)), 0, 100),
+        "hostility": clampi(int(memory.get("hostility", 0)), 0, 100),
+        "incident_count": maxi(0, int(memory.get("incident_count", 0))),
+        "last_incident": str(memory.get("last_incident", ""))
+    }
+
+func can_talk_to(character_id: String) -> bool:
+    return int(get_npc_social_state(character_id).get("fear", 0)) < 65
+
+func get_refusal_message(character_id: String) -> String:
+    if int(get_npc_social_state(character_id).get("fear", 0)) >= 65:
+        return "Loba na ngai te! Nazali kobanga yo. Tika ngai na kimia."
+    return ""
+
+func get_social_opening(character_id: String, default_opening: String) -> String:
+    var state := get_npc_social_state(character_id)
+    var fear := int(state.get("fear", 0))
+    var hostility := int(state.get("hostility", 0))
+    if fear >= 35:
+        return "Ndeko, nazali komikanga motema mpo na kosolola na yo. Nalingi mobulu ezonga lisusu te."
+    if hostility >= 20:
+        return "Nayebi makambo osalaki awa. Tosolola, kasi boyokani na biso ebebi naino te."
+    return default_opening
+
 func get_relationship_score(character_id: String) -> int:
     return int(relationship_scores.get(character_id, 0))
 
@@ -176,7 +223,8 @@ func _save_state() -> void:
     var data := {
         "relationship_scores": relationship_scores,
         "story_flags": story_flags,
-        "dialogue_history": dialogue_history
+        "dialogue_history": dialogue_history,
+        "npc_memories": npc_memories
     }
     var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
     if file != null:
@@ -203,6 +251,12 @@ func _load_state() -> void:
         for flag in flags:
             if typeof(flag) == TYPE_STRING and not story_flags.has(flag):
                 story_flags.append(flag)
+    var memories = parsed.get("npc_memories", {})
+    npc_memories.clear()
+    if memories is Dictionary:
+        for character_id in memories:
+            if typeof(memories[character_id]) == TYPE_DICTIONARY:
+                npc_memories[str(character_id)] = memories[character_id].duplicate(true)
     var history = parsed.get("dialogue_history", [])
     dialogue_history.clear()
     if history is Array:
