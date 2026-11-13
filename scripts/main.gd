@@ -9,6 +9,7 @@ const REPUTATION_MANAGER_SCRIPT = preload("res://scripts/reputation_manager.gd")
 const VEHICLE_CONTROLLER_SCRIPT = preload("res://scripts/vehicle_controller.gd")
 const POLICE_MANAGER_SCRIPT = preload("res://scripts/police_manager.gd")
 const SERVICE_NATIONAL_SCRIPT = preload("res://scripts/service_national_manager.gd")
+const STREET_CONFLICT_SCRIPT = preload("res://scripts/street_conflict_manager.gd")
 const MOBONDO_EMBLEM_SCRIPT = preload("res://scripts/mobondo_emblem.gd")
 const SAVE_PATH := "user://mobondo_save.json"
 
@@ -20,6 +21,8 @@ var economy_manager
 var needs_manager
 var reputation_manager
 var police_manager
+var conflict_manager
+var fight_button: Button
 var reputation_label: Label
 var vehicle
 var vehicle_label: Label
@@ -126,6 +129,12 @@ func _ready() -> void:
     add_child(police_manager)
     police_manager.configure(player, reputation_manager, Callable(self, "trigger_player_arrest"), vehicle)
     police_manager.police_message.connect(_on_police_message)
+    conflict_manager = STREET_CONFLICT_SCRIPT.new()
+    add_child(conflict_manager)
+    conflict_manager.configure(player, needs_manager, reputation_manager)
+    conflict_manager.conflict_message.connect(_on_conflict_message)
+    conflict_manager.create_rival("Rival ya Mapela 1", Vector3(3.0, 0.0, -18.0), Color(0.48, 0.12, 0.13))
+    conflict_manager.create_rival("Rival ya Mapela 2", Vector3(-4.0, 0.0, -20.0), Color(0.16, 0.18, 0.42))
     _load_world_state()
     if is_instance_valid(continue_button):
         continue_button.visible = has_saved_world
@@ -159,6 +168,8 @@ func _process(delta: float) -> void:
     if is_instance_valid(police_manager):
         police_manager.set_active(not menu_active and selected_mode == "histoire" and not mission_ending_active and is_instance_valid(mission_manager) and mission_manager.is_mission_active())
         police_manager.set_player_vehicle_state(vehicle_occupied, absf(float(vehicle.current_speed)) * 3.6 if is_instance_valid(vehicle) else 0.0)
+    if is_instance_valid(conflict_manager):
+        conflict_manager.set_active(not menu_active and not mission_ending_active and not vehicle_occupied and not public_transport_occupied)
     _update_world_clock(delta)
     if is_instance_valid(camera):
         if menu_active:
@@ -1369,6 +1380,13 @@ func _setup_ui() -> void:
     action_button.pressed.connect(_perform_action)
     controls.add_child(action_button)
 
+    fight_button = Button.new()
+    fight_button.text = "FRAPPER"
+    fight_button.custom_minimum_size = Vector2(108, 56)
+    fight_button.visible = false
+    fight_button.pressed.connect(_on_fight_pressed)
+    controls.add_child(fight_button)
+
     crime_button = Button.new()
     crime_button.text = "SCANDALE"
     crime_button.custom_minimum_size = Vector2(142, 52)
@@ -1734,6 +1752,14 @@ func _commit_street_offense() -> void:
 func _on_police_message(message: String) -> void:
     if is_instance_valid(status_label) and not mission_ending_active:
         status_label.text = message
+
+func _on_conflict_message(message: String) -> void:
+    if is_instance_valid(status_label) and not mission_ending_active:
+        status_label.text = message
+
+func _on_fight_pressed() -> void:
+    if is_instance_valid(conflict_manager):
+        conflict_manager.player_attack()
 
 func trigger_player_arrest() -> void:
     if selected_mode != "histoire" or not is_instance_valid(mission_manager) or not mission_manager.is_mission_active():
@@ -2372,6 +2398,8 @@ func _perform_action() -> void:
 func _update_nearby_npc_hint() -> void:
     if not is_instance_valid(action_button) or not is_instance_valid(player):
         return
+    if is_instance_valid(fight_button) and is_instance_valid(conflict_manager):
+        fight_button.visible = not vehicle_occupied and not public_transport_occupied and conflict_manager.get_nearest_rival_distance() <= 2.8
     if public_transport_occupied:
         action_button.text = "EN VOYAGE"
         return
