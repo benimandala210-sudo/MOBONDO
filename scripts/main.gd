@@ -55,6 +55,7 @@ var mission_checkpoint_position := Vector3(0, 1, 0)
 var action_button: Button
 var crime_button: Button
 var street_action_cooldown := 0.0
+var street_incident_cooldown := 0.0
 var transport_panel: PanelContainer
 var transport_vehicle: Node3D
 var public_transport_occupied := false
@@ -168,6 +169,7 @@ func _process(delta: float) -> void:
     menu_time += delta
     _animate_street_life(delta)
     street_action_cooldown = maxf(0.0, street_action_cooldown - delta)
+    street_incident_cooldown = maxf(0.0, street_incident_cooldown - delta)
     if is_instance_valid(crime_button):
         crime_button.disabled = street_action_cooldown > 0.0
     if is_instance_valid(police_manager):
@@ -1159,11 +1161,14 @@ func _update_traffic(delta: float) -> void:
 
 func _animate_street_life(delta: float) -> void:
     _update_traffic(delta)
+    _update_pedestrian_conflict_reactions(delta)
 
     # Déplacements autonomes sur de petites routes de quartier, avec pauses.
     for i in range(pedestrian_nodes.size()):
         var person := pedestrian_nodes[i]
         if not is_instance_valid(person) or not person.visible:
+            continue
+        if float(person.get_meta("reaction_timer", 0.0)) > 0.0:
             continue
 
         var walking := bool(person.get_meta("walks", false))
@@ -1215,7 +1220,7 @@ func _animate_street_life(delta: float) -> void:
     # Les habitants immobiles se tournent vers un voisin proche : la rue paraît habitée.
     for i in range(pedestrian_nodes.size()):
         var person := pedestrian_nodes[i]
-        if not is_instance_valid(person) or not person.visible or bool(person.get_meta("walks", false)):
+        if not is_instance_valid(person) or not person.visible or bool(person.get_meta("walks", false)) or float(person.get_meta("reaction_timer", 0.0)) > 0.0:
             continue
         var nearest_distance := 2.8
         var nearest_person: Node3D = null
@@ -1292,6 +1297,8 @@ func _update_world_clock(delta: float) -> void:
 func _apply_npc_routines(hour: int) -> void:
     for person in pedestrian_nodes:
         if not is_instance_valid(person):
+            continue
+        if float(person.get_meta("reaction_timer", 0.0)) > 0.0:
             continue
         var role := str(person.get_meta("role", "resident"))
         match role:
@@ -1817,8 +1824,96 @@ func _on_conflict_message(message: String) -> void:
         status_label.text = message
 
 func _on_fight_pressed() -> void:
-    if is_instance_valid(conflict_manager):
-        conflict_manager.player_attack()
+    if is_instance_valid(conflict_manager) and conflict_manager.player_attack():
+        _trigger_pedestrian_conflict_reactions()
+
+func _trigger_pedestrian_conflict_reactions() -> void:
+    if not is_instance_valid(player):
+        return
+    var incident_position := player.global_position
+    var witness_count := 0
+    var reporter_count := 0
+    for i in range(pedestrian_nodes.size()):
+        var person := pedestrian_nodes[i]
+        if not is_instance_valid(person) or not person.visible:
+            continue
+        var distance := Vector2(person.global_position.x - incident_position.x, person.global_position.z - incident_position.z).length()
+        if distance > 14.0:
+            continue
+        witness_count += 1
+        var role := str(person.get_meta("role", "resident"))
+        var reaction := "watch"
+        var duration := 2.8
+        if role == "child" or role == "passer" or role == "seller":
+            reaction = "flee"
+            duration = 4.5 if role == "child" else 3.8
+        elif i % 3 == 0:
+            reaction = "report"
+            duration = 3.6
+            reporter_count += 1
+        person.set_meta("reaction_state", reaction)
+        person.set_meta("reaction_timer", duration)
+        person.set_meta("reaction_origin", incident_position)
+        person.set_meta("reaction_walk_restore", bool(person.get_meta("walks", false)))
+        if reaction == "flee":
+            person.set_meta("activity", "fleeing")
+        elif reaction == "report":
+            person.set_meta("activity", "alerting_pnc")
+            var toward_player := incident_position - person.global_position
+            if Vector2(toward_player.x, toward_player.z).length() > 0.05:
+                person.rotation.y = atan2(-toward_player.x, -toward_player.z)
+        else:
+            person.set_meta("activity", "watching_fight")
+            var toward_player := incident_position - person.global_position
+            if Vector2(toward_player.x, toward_player.z).length() > 0.05:
+                person.rotation.y = atan2(-toward_player.x, -toward_player.z)
+    if street_incident_cooldown <= 0.0 and is_instance_valid(reputation_manager):
+        reputation_manager.record_offense("fight", witness_count > 0)
+        street_incident_cooldown = 10.0
+    if reporter_count > 0 and is_instance_valid(status_label):
+        status_label.text = "Mobulu emoni. Motatoli moko azali koyebisa PNC."
+    elif witness_count > 0 and is_instance_valid(status_label):
+        status_label.text = "Bato ya quartier bamoni mobulu. Basusu bazali kokima."
+    elif is_instance_valid(status_label):
+        status_label.text = "Affrontement sans témoin direct."
+
+func _update_pedestrian_conflict_reactions(delta: float) -> void:
+    for person in pedestrian_nodes:
+        if not is_instance_valid(person):
+            continue
+        var timer := float(person.get_meta("reaction_timer", 0.0))
+        if timer <= 0.0:
+            continue
+        timer = maxf(0.0, timer - delta)
+        person.set_meta("reaction_timer", timer)
+        var reaction := str(person.get_meta("reaction_state", "watch"))
+        if reaction == "flee":
+            var origin: Vector3 = person.get_meta("reaction_origin", player.global_position if is_instance_valid(player) else person.global_position)
+            var away := person.global_position - origin
+            away.y = 0.0
+            if away.length() < 0.1:
+                away = Vector3(1.0 if int(person.get_instance_id()) % 2 == 0 else -1.0, 0.0, 0.35)
+            var destination := person.global_position + away.normalized() * 7.0
+            var old_position := person.global_position
+            person.global_position = person.global_position.move_toward(destination, (3.4 if str(person.get_meta("role", "")) == "child" else 2.9) * delta)
+            var movement := person.global_position - old_position
+            if movement.length() > 0.001:
+                person.rotation.y = atan2(-movement.x, -movement.z)
+        if timer <= 0.0:
+            person.set_meta("reaction_state", "")
+            person.set_meta("activity", "walking" if bool(person.get_meta("reaction_walk_restore", false)) else "standing")
+            if bool(person.get_meta("reaction_walk_restore", false)):
+                var origin_position := person.global_position
+                var route: Array[Vector3] = [
+                    origin_position + Vector3(1.0, 0.0, -2.0),
+                    origin_position + Vector3(1.0, 0.0, 2.0),
+                    origin_position + Vector3(-1.0, 0.0, 2.0),
+                    origin_position + Vector3(-1.0, 0.0, -2.0)
+                ]
+                person.set_meta("ai_route", route)
+                person.set_meta("ai_route_index", 0)
+                person.set_meta("ai_wait", 0.4)
+                person.set_meta("walks", true)
 
 func _on_weapon_cycle_pressed() -> void:
     if is_instance_valid(conflict_manager):
