@@ -246,6 +246,7 @@ func _save_world_state() -> void:
             "y": vehicle.global_position.y,
             "z": vehicle.global_position.z
         },
+        "vehicle_rotation_y": vehicle.global_rotation.y,
         "vehicle_fuel": vehicle.get_fuel(),
         "vehicle_type": str(vehicle.vehicle_type),
         "vehicle_is_stolen": vehicle_is_stolen,
@@ -300,6 +301,7 @@ func _load_world_state() -> void:
             float(vehicle_data.get("z", saved_vehicle_position.z))
         )
         vehicle.global_position = saved_vehicle_position
+        vehicle.global_rotation.y = float(parsed.get("vehicle_rotation_y", 0.0))
         saved_vehicle_fuel = clampf(float(parsed.get("vehicle_fuel", 100.0)), 0.0, 100.0)
         vehicle.refuel(saved_vehicle_fuel - vehicle.get_fuel())
     if vehicle_is_stolen:
@@ -2513,6 +2515,7 @@ func _steal_nearby_vehicle(target: Node3D) -> void:
     if not is_instance_valid(stolen_controller):
         status_label.text = "Le véhicule ne peut pas être pris."
         return
+    stolen_controller.global_transform = target.global_transform
     var previous_vehicle = vehicle
     vehicle = stolen_controller
     if is_instance_valid(previous_vehicle):
