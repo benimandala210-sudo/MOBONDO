@@ -2503,8 +2503,8 @@ func _steal_nearby_vehicle(target: Node3D) -> void:
     target.set_meta("stealable", false)
     vehicle_is_stolen = true
     if is_instance_valid(police_manager):
-        police_manager.configure(player, reputation_manager, Callable(self, "trigger_player_arrest"), vehicle)
-    status_label.text = "Moto volée. " + ("Des témoins peuvent prévenir la PNC." if witnessed else "Personne à proximité ne semble avoir vu le vol.")
+        police_manager.set_vehicle_target(vehicle)
+    status_label.text = "Moto volée.  + ("Des témoins peuvent prévenir la PNC." if witnessed else "Personne à proximité ne semble avoir vu le vol.")
     _mount_vehicle()
     _save_world_state()
 
