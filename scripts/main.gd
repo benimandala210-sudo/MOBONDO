@@ -1833,6 +1833,7 @@ func _trigger_pedestrian_conflict_reactions() -> void:
     var incident_position := player.global_position
     var witness_count := 0
     var reporter_count := 0
+    var remembered_witnesses: Array[String] = []
     for i in range(pedestrian_nodes.size()):
         var person := pedestrian_nodes[i]
         if not is_instance_valid(person) or not person.visible:
@@ -1841,6 +1842,8 @@ func _trigger_pedestrian_conflict_reactions() -> void:
         if distance > 14.0:
             continue
         witness_count += 1
+        if person.has_meta("character_id"):
+            remembered_witnesses.append(str(person.get_meta("character_id")))
         var role := str(person.get_meta("role", "resident"))
         var reaction := "watch"
         var duration := 2.8
@@ -1867,6 +1870,9 @@ func _trigger_pedestrian_conflict_reactions() -> void:
             var toward_player := incident_position - person.global_position
             if Vector2(toward_player.x, toward_player.z).length() > 0.05:
                 person.rotation.y = atan2(-toward_player.x, -toward_player.z)
+    if is_instance_valid(dialogue_manager):
+        for character_id in remembered_witnesses:
+            dialogue_manager.record_npc_incident(character_id, "fight", 1)
     if street_incident_cooldown <= 0.0 and is_instance_valid(reputation_manager):
         reputation_manager.record_offense("fight", witness_count > 0)
         street_incident_cooldown = 10.0
@@ -1877,7 +1883,35 @@ func _trigger_pedestrian_conflict_reactions() -> void:
     elif is_instance_valid(status_label):
         status_label.text = "Affrontement sans témoin direct."
 
+func _update_fearful_npc_avoidance(delta: float) -> void:
+    if menu_active or not is_instance_valid(player) or not player.visible or vehicle_occupied or public_transport_occupied or not is_instance_valid(dialogue_manager):
+        return
+    for person in pedestrian_nodes:
+        if not is_instance_valid(person) or not person.visible or not person.has_meta("character_id"):
+            continue
+        if float(person.get_meta("reaction_timer", 0.0)) > 0.0:
+            continue
+        var character_id := str(person.get_meta("character_id"))
+        var social_state := dialogue_manager.get_npc_social_state(character_id)
+        var fear := int(social_state.get("fear", 0))
+        if fear < 45:
+            continue
+        var distance := person.global_position.distance_to(player.global_position)
+        if distance > 4.2 or distance < 0.1:
+            continue
+        var cooldown := maxf(0.0, float(person.get_meta("fear_avoid_cooldown", 0.0)) - delta)
+        person.set_meta("fear_avoid_cooldown", cooldown)
+        if cooldown > 0.0:
+            continue
+        person.set_meta("reaction_state", "avoid_player")
+        person.set_meta("reaction_timer", 1.25 if fear >= 65 else 0.8)
+        person.set_meta("reaction_origin", player.global_position)
+        person.set_meta("reaction_walk_restore", bool(person.get_meta("walks", false)))
+        person.set_meta("fear_avoid_cooldown", 3.0)
+        person.set_meta("activity", "avoiding_player")
+
 func _update_pedestrian_conflict_reactions(delta: float) -> void:
+    _update_fearful_npc_avoidance(delta)
     for person in pedestrian_nodes:
         if not is_instance_valid(person):
             continue
@@ -1887,15 +1921,17 @@ func _update_pedestrian_conflict_reactions(delta: float) -> void:
         timer = maxf(0.0, timer - delta)
         person.set_meta("reaction_timer", timer)
         var reaction := str(person.get_meta("reaction_state", "watch"))
-        if reaction == "flee":
+        if reaction == "flee" or reaction == "avoid_player":
             var origin: Vector3 = person.get_meta("reaction_origin", player.global_position if is_instance_valid(player) else person.global_position)
             var away := person.global_position - origin
             away.y = 0.0
             if away.length() < 0.1:
                 away = Vector3(1.0 if int(person.get_instance_id()) % 2 == 0 else -1.0, 0.0, 0.35)
-            var destination := person.global_position + away.normalized() * 7.0
+            var escape_distance := 7.0 if reaction == "flee" else 2.8
+            var escape_speed := (3.4 if str(person.get_meta("role", "")) == "child" else 2.9) if reaction == "flee" else 2.2
+            var destination := person.global_position + away.normalized() * escape_distance
             var old_position := person.global_position
-            person.global_position = person.global_position.move_toward(destination, (3.4 if str(person.get_meta("role", "")) == "child" else 2.9) * delta)
+            person.global_position = person.global_position.move_toward(destination, escape_speed * delta)
             var movement := person.global_position - old_position
             if movement.length() > 0.001:
                 person.rotation.y = atan2(-movement.x, -movement.z)
@@ -2763,6 +2799,10 @@ func _try_talk_to_nearby_npc() -> bool:
             closest_id = str(person.get_meta("character_id"))
     if closest_id.is_empty():
         return false
+    if is_instance_valid(dialogue_manager) and not dialogue_manager.can_talk_to(closest_id):
+        if is_instance_valid(status_label):
+            status_label.text = dialogue_manager.get_refusal_message(closest_id)
+        return true
     var opening_override := ""
     if is_instance_valid(reputation_manager):
         if reputation_manager.wanted_level >= 3:
