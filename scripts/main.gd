@@ -1771,7 +1771,7 @@ func _play_start_transition() -> void:
     transition_active = false
 
     if selected_mode == "histoire" and is_instance_valid(mission_manager):
-        var restored_state := mission_manager.get_mission_state()
+        var restored_state: String = mission_manager.get_mission_state()
         if restored_state == "arrested" or restored_state == "dead":
             player.global_position = mission_checkpoint_position
             player.visible = true
@@ -1780,7 +1780,7 @@ func _play_start_transition() -> void:
             status_label.text = "Épisode repris après interruption — nouvelle tentative."
             _save_world_state()
         elif restored_state == "victory":
-            var restored_episode := mission_manager.get_current_episode()
+            var restored_episode: Dictionary = mission_manager.get_current_episode()
             _on_mission_ended(
                 "victory",
                 str(restored_episode.get("title", "Mission")),
@@ -1938,7 +1938,7 @@ func _update_fearful_npc_avoidance(delta: float) -> void:
         if float(person.get_meta("reaction_timer", 0.0)) > 0.0:
             continue
         var character_id := str(person.get_meta("character_id"))
-        var social_state := dialogue_manager.get_npc_social_state(character_id)
+        var social_state: Dictionary = dialogue_manager.get_npc_social_state(character_id)
         var fear := int(social_state.get("fear", 0))
         if fear < 45:
             continue
@@ -2646,8 +2646,8 @@ func _update_nearby_npc_hint() -> void:
     if not is_instance_valid(action_button) or not is_instance_valid(player):
         return
     if is_instance_valid(fight_button) and is_instance_valid(conflict_manager):
-        var rival_distance := conflict_manager.get_nearest_rival_distance()
-        var can_fight := not vehicle_occupied and not public_transport_occupied and rival_distance <= conflict_manager.get_weapon_range()
+        var rival_distance: float = conflict_manager.get_nearest_rival_distance()
+        var can_fight: bool = not vehicle_occupied and not public_transport_occupied and rival_distance <= conflict_manager.get_weapon_range()
         fight_button.visible = can_fight
         fight_button.text = "ATTAQUER — " + conflict_manager.get_weapon_label()
         weapon_button.visible = not vehicle_occupied and not public_transport_occupied and rival_distance <= 10.0
@@ -2715,7 +2715,7 @@ func _steal_nearby_vehicle(target: Node3D) -> void:
     if witnessed:
         _record_npc_witness_memories(target.global_position, 12.0, "vehicle_theft")
     var stolen_type := str(target.get_meta("vehicle_type", "moto"))
-    var stolen_controller := _create_vehicle_controller(stolen_type, target.global_position)
+    var stolen_controller: CharacterBody3D = _create_vehicle_controller(stolen_type, target.global_position)
     if not is_instance_valid(stolen_controller):
         status_label.text = "Le véhicule ne peut pas être pris."
         return
@@ -2855,7 +2855,7 @@ func _try_talk_to_nearby_npc() -> bool:
         return true
     var opening_override := ""
     if is_instance_valid(dialogue_manager):
-        var social_state := dialogue_manager.get_npc_social_state(closest_id)
+        var social_state: Dictionary = dialogue_manager.get_npc_social_state(closest_id)
         if int(social_state.get("fear", 0)) >= 35 or int(social_state.get("hostility", 0)) >= 20:
             opening_override = dialogue_manager.get_social_opening(closest_id, "")
     if opening_override.is_empty() and is_instance_valid(reputation_manager):
