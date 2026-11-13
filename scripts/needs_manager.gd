@@ -121,7 +121,9 @@ func _load_state() -> void:
     hunger = clampf(float(parsed.get("hunger", hunger)), 0.0, 100.0)
     thirst = clampf(float(parsed.get("thirst", thirst)), 0.0, 100.0)
     energy = clampf(float(parsed.get("energy", energy)), 0.0, 100.0)
-    health = clampf(float(parsed.get("health", health)), 0.0, 100.0)
+    # Une sauvegarde ancienne à 0 ne doit pas tuer le joueur au chargement.
+    # Les dégâts de combat peuvent toujours faire tomber la santé à 0 en jeu.
+    health = clampf(float(parsed.get("health", health)), 1.0, 100.0)
     hygiene = clampf(float(parsed.get("hygiene", hygiene)), 0.0, 100.0)
 
 func _emit_update() -> void:
