@@ -189,10 +189,8 @@ func _process(delta: float) -> void:
         var alerted := bool(rival.get_meta("group_alerted", false)) or group_grudge > 0.0
         if alerted:
             rival.set_meta("group_alerted", true)
-        if not alerted and distance <= 3.5:
-            _alert_group(str(rival.get_meta("group_id", "groupe_mapela")))
-            alerted = true
-            alert_time = 15.0
+        # Les rivaux ne déclenchent plus une agression par simple proximité.
+        # Ils réagissent après une attaque du joueur ou une rancune déjà mémorisée.
         if alerted and alert_time <= 0.0:
             rival.set_meta("group_alerted", false)
             rival.set_meta("state", "idle")
