@@ -1713,10 +1713,17 @@ func _setup_mission_ending_ui(layer: CanvasLayer) -> void:
 func _commit_street_offense() -> void:
     if menu_active or selected_mode != "histoire" or street_action_cooldown > 0.0:
         return
-    if not is_instance_valid(reputation_manager) or not reputation_manager.record_offense("provocation", true):
+    var witnessed := false
+    for person in pedestrian_nodes:
+        if not is_instance_valid(person) or not person.visible:
+            continue
+        if person.global_position.distance_to(player.global_position) <= 12.0:
+            witnessed = true
+            break
+    if not is_instance_valid(reputation_manager) or not reputation_manager.record_offense("provocation", witnessed):
         return
     street_action_cooldown = 8.0
-    status_label.text = "Scandale public : les témoins peuvent alerter la PNC. Reste vigilant."
+    status_label.text = "Scandale vu par les habitants : la PNC peut intervenir." if witnessed else "Scandale sans témoin proche : la pression policière augmente moins."
 
 func _on_police_message(message: String) -> void:
     if is_instance_valid(status_label) and not mission_ending_active:
