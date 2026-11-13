@@ -45,6 +45,13 @@ func rest() -> void:
     health = minf(100.0, health + 2.0)
     _emit_update()
 
+func apply_damage(amount: float) -> void:
+    if amount <= 0.0 or health <= 0.0:
+        return
+    health = maxf(0.0, health - amount)
+    save_state()
+    _emit_update()
+
 func receive_treatment(amount: float = 40.0) -> void:
     health = minf(100.0, health + maxf(0.0, amount))
     energy = minf(100.0, energy + 5.0)
