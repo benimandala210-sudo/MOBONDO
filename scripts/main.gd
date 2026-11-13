@@ -1382,10 +1382,16 @@ func _setup_ui() -> void:
 
     fight_button = Button.new()
     fight_button.text = "FRAPPER"
-    fight_button.custom_minimum_size = Vector2(108, 56)
+    fight_button.custom_minimum_size = Vector2(142, 52)
+    fight_button.anchor_left = 1.0
+    fight_button.anchor_right = 1.0
+    fight_button.offset_left = -158
+    fight_button.offset_right = -16
+    fight_button.offset_top = 76
+    fight_button.offset_bottom = 128
     fight_button.visible = false
     fight_button.pressed.connect(_on_fight_pressed)
-    controls.add_child(fight_button)
+    layer.add_child(fight_button)
 
     crime_button = Button.new()
     crime_button.text = "SCANDALE"
