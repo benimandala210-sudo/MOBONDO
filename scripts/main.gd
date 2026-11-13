@@ -2530,8 +2530,8 @@ func _steal_nearby_vehicle(target: Node3D) -> void:
     _mount_vehicle()
     _save_world_state()
 
-func _create_vehicle_controller(type: String, spawn_position: Vector3) -> CharacterBody3D:
-    var controller := CharacterBody3D.new()
+func _create_vehicle_controller(type: String, spawn_position: Vector3):
+    var controller = CharacterBody3D.new()
     controller.set_script(VEHICLE_CONTROLLER_SCRIPT)
     controller.vehicle_type = "voiture" if type == "voiture" else "moto"
     controller.name = "VoitureVoleeJoueur" if controller.vehicle_type == "voiture" else "MotoVoleeJoueur"
