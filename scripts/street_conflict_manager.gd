@@ -165,14 +165,14 @@ func _alert_group(group_id: String) -> void:
 func _process(delta: float) -> void:
     if player_cooldown > 0.0:
         player_cooldown = maxf(0.0, player_cooldown - delta)
+    if not active or not is_instance_valid(player) or not player.visible:
+        return
     for group_id in retaliation_memory.keys():
         retaliation_memory[group_id] = maxf(0.0, float(retaliation_memory[group_id]) - delta)
     retaliation_save_timer += delta
     if retaliation_save_timer >= 5.0:
         retaliation_save_timer = 0.0
         _save_retaliation_memory()
-    if not active or not is_instance_valid(player) or not player.visible:
-        return
     for i in range(rivals.size() - 1, -1, -1):
         var rival := rivals[i]
         if not is_instance_valid(rival):
