@@ -55,6 +55,7 @@ func apply_damage(amount: float) -> void:
 func receive_treatment(amount: float = 40.0) -> void:
     health = minf(100.0, health + maxf(0.0, amount))
     energy = minf(100.0, energy + 5.0)
+    save_state()
     _emit_update()
 
 func exercise() -> void:
