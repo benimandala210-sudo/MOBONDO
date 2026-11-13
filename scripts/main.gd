@@ -52,6 +52,7 @@ var mission_ending_detail_label: Label
 var mission_next_button: Button
 var mission_ending_active := false
 var mission_checkpoint_position := Vector3(0, 1, 0)
+var has_saved_mission_checkpoint := false
 var action_button: Button
 var crime_button: Button
 var street_action_cooldown := 0.0
@@ -259,7 +260,12 @@ func _save_world_state() -> void:
         "world_minutes": world_minutes,
         "camera_yaw": camera_yaw,
         "camera_pitch": camera_pitch,
-        "selected_mode": selected_mode
+        "selected_mode": selected_mode,
+        "mission_checkpoint_position": {
+            "x": mission_checkpoint_position.x,
+            "y": mission_checkpoint_position.y,
+            "z": mission_checkpoint_position.z
+        }
     }
     var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
     if file == null:
@@ -287,6 +293,14 @@ func _load_world_state() -> void:
             float(position_data.get("z", 0.0))
         )
         has_saved_world = true
+    var checkpoint_data = parsed.get("mission_checkpoint_position", {})
+    if checkpoint_data is Dictionary and checkpoint_data.has("x") and checkpoint_data.has("z"):
+        mission_checkpoint_position = Vector3(
+            float(checkpoint_data.get("x", 0.0)),
+            maxf(float(checkpoint_data.get("y", 1.0)), 0.5),
+            float(checkpoint_data.get("z", 0.0))
+        )
+        has_saved_mission_checkpoint = true
     world_minutes = fposmod(float(parsed.get("world_minutes", world_minutes)), 1440.0)
     camera_yaw = float(parsed.get("camera_yaw", camera_yaw))
     camera_pitch = clampf(float(parsed.get("camera_pitch", camera_pitch)), -0.12, 0.62)
@@ -1736,7 +1750,9 @@ func _play_start_transition() -> void:
     camera_move.tween_property(camera, "global_position", Vector3(0, 4.2, 8.2), 1.8)
     await camera_move.finished
     camera.look_at(player.global_position + Vector3(0, 1.0, 0), Vector3.UP)
-    mission_checkpoint_position = player.global_position
+    if not has_saved_mission_checkpoint:
+        mission_checkpoint_position = player.global_position
+        has_saved_mission_checkpoint = true
 
     if selected_mode == "histoire":
         status_label.text = "MODE HISTOIRE — Tokoba na eteni ya liboso."
@@ -1753,6 +1769,24 @@ func _play_start_transition() -> void:
     crime_button.visible = selected_mode == "histoire"
     transition_layer.queue_free()
     transition_active = false
+
+    if selected_mode == "histoire" and is_instance_valid(mission_manager):
+        var restored_state := mission_manager.get_mission_state()
+        if restored_state == "arrested" or restored_state == "dead":
+            player.global_position = mission_checkpoint_position
+            player.visible = true
+            player.velocity = Vector3.ZERO
+            mission_manager.restart_episode()
+            status_label.text = "Épisode repris après interruption — nouvelle tentative."
+            _save_world_state()
+        elif restored_state == "victory":
+            var restored_episode := mission_manager.get_current_episode()
+            _on_mission_ended(
+                "victory",
+                str(restored_episode.get("title", "Mission")),
+                "Objectif principal accompli.",
+                mission_manager.get_episode_reward()
+            )
 
 
 func _setup_mission_ending_ui(layer: CanvasLayer) -> void:
@@ -2047,6 +2081,7 @@ func _on_mission_ended(outcome: String, episode_title: String, reason: String, r
             mission_manager.restart_episode()
         if is_instance_valid(status_label):
             status_label.text = "Nouvelle tentative — recommence l'épisode."
+        _save_world_state()
     elif outcome == "victory":
         if is_instance_valid(status_label):
             status_label.text = "Épisode validé. Le prochain épisode est débloqué."
@@ -2061,11 +2096,14 @@ func _on_next_episode_pressed() -> void:
     if is_instance_valid(mission_ending_layer):
         mission_ending_layer.visible = false
     if is_instance_valid(player) and not menu_active:
+        mission_checkpoint_position = player.global_position
+        has_saved_mission_checkpoint = true
         player.set_physics_process(true)
     mission_ending_active = false
     _refresh_mission()
     if is_instance_valid(status_label):
         status_label.text = "Nouvel épisode — l'histoire continue à Mapela–Raïs."
+    _save_world_state()
 
 
 func _setup_needs_ui(layer: CanvasLayer) -> void:
