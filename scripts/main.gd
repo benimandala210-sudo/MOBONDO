@@ -12,6 +12,27 @@ const SERVICE_NATIONAL_SCRIPT = preload("res://scripts/service_national_manager.
 const STREET_CONFLICT_SCRIPT = preload("res://scripts/street_conflict_manager.gd")
 const MOBONDO_EMBLEM_SCRIPT = preload("res://scripts/mobondo_emblem.gd")
 const SAVE_PATH := "user://mobondo_save.json"
+const SURFACE_SHADER_CODE := """
+shader_type spatial;
+render_mode diffuse_burley, specular_schlick_ggx;
+
+uniform vec4 surface_color : source_color = vec4(1.0);
+uniform float surface_roughness = 0.9;
+varying vec3 local_position;
+
+void vertex() {
+    local_position = VERTEX;
+}
+
+void fragment() {
+    float broad = 0.5 + 0.5 * sin(local_position.x * 2.1 + sin(local_position.z * 1.6));
+    float grain = fract(sin(dot(local_position * vec3(31.7, 19.3, 27.1), vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+    float variation = clamp(0.94 + (broad - 0.5) * 0.10 + (grain - 0.5) * 0.045, 0.86, 1.04);
+    ALBEDO = surface_color.rgb * variation;
+    ROUGHNESS = surface_roughness;
+}
+"""
+var surface_shader: Shader
 
 var player: CharacterBody3D
 var camera: Camera3D
@@ -107,6 +128,8 @@ var has_saved_world := false
 var saved_player_position := Vector3(0, 1, 0)
 
 func _ready() -> void:
+    surface_shader = Shader.new()
+    surface_shader.code = SURFACE_SHADER_CODE
     _setup_world()
     _setup_player()
     _ensure_economy_manager()
@@ -2945,7 +2968,11 @@ func _add_box(box_name: String, pos: Vector3, size: Vector3, color: Color) -> Me
     static_body.add_child(collision)
     return item
 
-func _material(color: Color) -> StandardMaterial3D:
-    var mat := StandardMaterial3D.new()
-    mat.albedo_color = color
+func _material(color: Color) -> Material:
+    # Matériau partagé visuellement : micro-variations de surface pour casser
+    # l'aspect plastique/uniforme des volumes sans ajouter de textures lourdes.
+    var mat := ShaderMaterial.new()
+    mat.shader = surface_shader
+    mat.set_shader_parameter("surface_color", color)
+    mat.set_shader_parameter("surface_roughness", 0.92)
     return mat
