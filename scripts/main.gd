@@ -86,6 +86,8 @@ var traffic_vehicles: Array[Node3D] = []
 var traffic_base_speeds: Array[float] = []
 var traffic_directions: Array[float] = []
 var traffic_current_speeds: Array[float] = []
+var stealable_vehicles: Array[Node3D] = []
+var vehicle_is_stolen := false
 var world_minutes := 7.0 * 60.0
 var routine_refresh_timer := 0.0
 var sunlight: DirectionalLight3D
@@ -245,6 +247,7 @@ func _save_world_state() -> void:
             "z": vehicle.global_position.z
         },
         "vehicle_fuel": vehicle.get_fuel(),
+        "vehicle_is_stolen": vehicle_is_stolen,
         "world_minutes": world_minutes,
         "camera_yaw": camera_yaw,
         "camera_pitch": camera_pitch,
@@ -289,6 +292,9 @@ func _load_world_state() -> void:
         vehicle.global_position = saved_vehicle_position
         saved_vehicle_fuel = clampf(float(parsed.get("vehicle_fuel", 100.0)), 0.0, 100.0)
         vehicle.refuel(saved_vehicle_fuel - vehicle.get_fuel())
+    vehicle_is_stolen = bool(parsed.get("vehicle_is_stolen", false))
+    if vehicle_is_stolen and not stealable_vehicles.is_empty() and is_instance_valid(stealable_vehicles[0]):
+        stealable_vehicles[0].visible = false
     var loaded_mode := str(parsed.get("selected_mode", "histoire"))
     if loaded_mode == "histoire" or loaded_mode == "libre":
         selected_mode = loaded_mode
@@ -1041,6 +1047,15 @@ func _setup_traffic() -> void:
             second_moto.name = "Moto taxi — circulation 2"
             add_child(second_moto)
             _register_traffic_vehicle(second_moto, 1.65, 8.0, 1.0, 5.8, "Moto taxi — circulation 2")
+        var parked_moto: Node3D = street_moto.duplicate() as Node3D
+        if parked_moto != null:
+            parked_moto.name = "Moto stationnée — véhicule volable"
+            add_child(parked_moto)
+            parked_moto.position = Vector3(4.2, 0.0, -26.0)
+            parked_moto.rotation.y = PI * 0.5
+            parked_moto.set_meta("stealable", true)
+            parked_moto.set_meta("vehicle_type", "moto")
+            stealable_vehicles.append(parked_moto)
 
 func _register_traffic_vehicle(vehicle: Node3D, lane_x: float, start_z: float, direction: float, speed: float, label: String) -> void:
     vehicle.position = Vector3(lane_x, 0.0, start_z)
@@ -2362,6 +2377,10 @@ func _perform_action() -> void:
     if public_transport_occupied:
         status_label.text = "Ozali na mobembo. Taxi ezali kokende na esika oponaki."
         return
+    var parked_target := _get_nearby_stealable_vehicle()
+    if is_instance_valid(parked_target):
+        _steal_nearby_vehicle(parked_target)
+        return
     var nearby_transport := _find_nearby_public_transport()
     if is_instance_valid(nearby_transport):
         _open_transport_menu(nearby_transport)
@@ -2418,6 +2437,10 @@ func _update_nearby_npc_hint() -> void:
     if is_instance_valid(nearby_transport):
         action_button.text = "PRENDRE " + ("MOTO-TAXI" if str(nearby_transport.get_meta("traffic_label", "")).contains("Moto") else "TAXI")
         return
+    var parked_target := _get_nearby_stealable_vehicle()
+    if is_instance_valid(parked_target):
+        action_button.text = "TENTER VOL MOTO"
+        return
     if is_instance_valid(vehicle) and player.global_position.distance_to(vehicle.global_position) <= 3.8:
         action_button.text = "MONTER SUR LA MOTO"
         return
@@ -2436,6 +2459,54 @@ func _update_nearby_npc_hint() -> void:
             nearest_name = str(person.name)
     action_button.text = "PARLER — " + nearest_name if not nearest_name.is_empty() else "SALA"
 
+
+func _get_nearby_stealable_vehicle() -> Node3D:
+    if not is_instance_valid(player) or vehicle_occupied or public_transport_occupied:
+        return null
+    var nearest: Node3D = null
+    var nearest_distance := 3.2
+    for target in stealable_vehicles:
+        if not is_instance_valid(target) or not target.visible or not bool(target.get_meta("stealable", false)):
+            continue
+        var distance := player.global_position.distance_to(target.global_position)
+        if distance <= nearest_distance:
+            nearest_distance = distance
+            nearest = target
+    return nearest
+
+func _steal_nearby_vehicle(target: Node3D) -> void:
+    if not is_instance_valid(target) or vehicle_occupied or public_transport_occupied or not is_instance_valid(vehicle):
+        return
+    var witnessed := false
+    for person in pedestrian_nodes:
+        if not is_instance_valid(person) or not person.visible:
+            continue
+        if person.global_position.distance_to(target.global_position) <= 12.0:
+            witnessed = true
+            break
+    if not is_instance_valid(reputation_manager) or not reputation_manager.record_offense("vehicle_theft", witnessed):
+        status_label.text = "Vol impossible pour le moment."
+        return
+    var stolen_controller = VEHICLE_CONTROLLER_SCRIPT.new()
+    if not is_instance_valid(stolen_controller):
+        status_label.text = "Le véhicule ne peut pas être pris."
+        return
+    stolen_controller.name = "MotoVoleeJoueur"
+    add_child(stolen_controller)
+    stolen_controller.global_position = target.global_position
+    stolen_controller.vehicle_state_changed.connect(_on_vehicle_state_changed)
+    var previous_vehicle = vehicle
+    vehicle = stolen_controller
+    if is_instance_valid(previous_vehicle):
+        previous_vehicle.queue_free()
+    target.visible = false
+    target.set_meta("stealable", false)
+    vehicle_is_stolen = true
+    if is_instance_valid(police_manager):
+        police_manager.configure(player, reputation_manager, Callable(self, "trigger_player_arrest"), vehicle)
+    status_label.text = "Moto volée. " + ("Des témoins peuvent prévenir la PNC." if witnessed else "Personne à proximité ne semble avoir vu le vol.")
+    _mount_vehicle()
+    _save_world_state()
 
 func _get_nearby_service() -> Dictionary:
     if not is_instance_valid(player) or vehicle_occupied:
