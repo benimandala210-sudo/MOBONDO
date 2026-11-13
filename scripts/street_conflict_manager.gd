@@ -11,6 +11,7 @@ var player_cooldown := 0.0
 var rivals: Array[Node3D] = []
 var rival_cooldowns: Dictionary = {}
 var retaliation_memory: Dictionary = {}
+var retaliation_unlocked_groups: Dictionary = {}
 var retaliation_save_timer := 0.0
 var weapon_order := ["machette", "pierre", "lame"]
 var selected_weapon := "machette"
@@ -151,6 +152,9 @@ func player_attack() -> bool:
     return true
 
 func _alert_group(group_id: String) -> void:
+    # Une rancune n’autorise une riposte que si le joueur vient réellement
+    # de provoquer ce groupe pendant cette session de jeu.
+    retaliation_unlocked_groups[group_id] = true
     retaliation_memory[group_id] = maxf(float(retaliation_memory.get(group_id, 0.0)), 30.0)
     _save_retaliation_memory()
     for rival in rivals:
@@ -186,7 +190,7 @@ func _process(delta: float) -> void:
         var group_grudge := float(retaliation_memory.get(group_id, 0.0))
         var alert_time := maxf(maxf(0.0, float(rival.get_meta("alert_time", 0.0)) - delta), group_grudge)
         rival.set_meta("alert_time", alert_time)
-        var alerted := bool(rival.get_meta("group_alerted", false)) or group_grudge > 0.0
+        var alerted := bool(rival.get_meta("group_alerted", false)) or (bool(retaliation_unlocked_groups.get(group_id, false)) and group_grudge > 0.0)
         if alerted:
             rival.set_meta("group_alerted", true)
         # Les rivaux ne déclenchent plus une agression par simple proximité.
