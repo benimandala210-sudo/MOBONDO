@@ -133,8 +133,10 @@ func _ready() -> void:
     add_child(conflict_manager)
     conflict_manager.configure(player, needs_manager, reputation_manager)
     conflict_manager.conflict_message.connect(_on_conflict_message)
-    conflict_manager.create_rival("Rival ya Mapela 1", Vector3(3.0, 0.0, -18.0), Color(0.48, 0.12, 0.13))
-    conflict_manager.create_rival("Rival ya Mapela 2", Vector3(-4.0, 0.0, -20.0), Color(0.16, 0.18, 0.42))
+    conflict_manager.create_rival("Rival ya Mapela 1", Vector3(3.0, 0.0, -18.0), Color(0.48, 0.12, 0.13), "groupe_mapela")
+    conflict_manager.create_rival("Rival ya Mapela 2", Vector3(-7.0, 0.0, -18.5), Color(0.48, 0.12, 0.13), "groupe_mapela")
+    conflict_manager.create_rival("Rival ya Raïs 1", Vector3(-4.0, 0.0, -20.0), Color(0.16, 0.18, 0.42), "groupe_rais")
+    conflict_manager.create_rival("Rival ya Raïs 2", Vector3(6.0, 0.0, -22.0), Color(0.16, 0.18, 0.42), "groupe_rais")
     _load_world_state()
     if is_instance_valid(continue_button):
         continue_button.visible = has_saved_world
