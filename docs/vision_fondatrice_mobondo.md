@@ -116,3 +116,12 @@ Si la réponse est non, la fonctionnalité doit être repensée, reportée ou é
 
 ## 10. Représentation des affrontements de rue
 Les affrontements du quartier doivent refléter les éléments signalés lors de la conception terrain : machettes, pierres et lames de type Gillette peuvent apparaître comme armes de jeu. Leur présence doit être identifiable dans les choix d'équipement et les animations, sans glorification ni représentation graphique des blessures. Les mécaniques restent abstraites et ludiques : portée, disponibilité, temps de récupération, dégâts non graphiques et conséquences sur la santé, la réputation, les témoins et l'attention policière. Cette représentation ne constitue pas un guide d'utilisation réelle des armes.
+
+## Direction artistique — révision visuelle (13 novembre 2026)
+
+L'identité visuelle de MOBONDO doit évoluer au-delà des volumes géométriques bruts. La cible est un **réalisme stylisé urbain**, crédible et lisible sur Android : architecture de quartier kinoise, matériaux mats et irréguliers, tôles patinées, enduits de murs, poussière, béton usé, vitrages, enseignes, mobilier et végétation variés. Les silhouettes humaines doivent progressivement recevoir des proportions, vêtements, visages et animations cohérents.
+
+Les primitives restent autorisées pour les collisions, prototypes et éléments secondaires, mais ne doivent plus être la finition dominante des bâtiments, véhicules ou personnages. Les matériaux procéduraux légers peuvent apporter une première variation de surface ; ils ne remplacent pas les textures photographiques optimisées, les modèles 3D travaillés ni les animations de qualité.
+
+**Priorité technique :** stabiliser l'épisode 1, puis remplacer les éléments les plus visibles par des assets optimisés, avec niveaux de détail, limitation des ombres dynamiques, regroupement des surfaces statiques et budget mémoire adapté aux téléphones Android modestes. Toute amélioration visuelle doit être mesurée sur appareil réel ; aucune qualité graphique ne justifie des plantages.
+
