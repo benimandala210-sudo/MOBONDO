@@ -23,6 +23,7 @@ var reputation_manager
 var police_manager
 var conflict_manager
 var fight_button: Button
+var weapon_button: Button
 var reputation_label: Label
 var vehicle
 var vehicle_label: Label
@@ -1432,6 +1433,19 @@ func _setup_ui() -> void:
     fight_button.pressed.connect(_on_fight_pressed)
     layer.add_child(fight_button)
 
+    weapon_button = Button.new()
+    weapon_button.text = "ARME : MACHETTE"
+    weapon_button.custom_minimum_size = Vector2(142, 48)
+    weapon_button.anchor_left = 1.0
+    weapon_button.anchor_right = 1.0
+    weapon_button.offset_left = -158
+    weapon_button.offset_right = -16
+    weapon_button.offset_top = 136
+    weapon_button.offset_bottom = 184
+    weapon_button.visible = false
+    weapon_button.pressed.connect(_on_weapon_cycle_pressed)
+    layer.add_child(weapon_button)
+
     crime_button = Button.new()
     crime_button.text = "SCANDALE"
     crime_button.custom_minimum_size = Vector2(142, 52)
@@ -1805,6 +1819,10 @@ func _on_conflict_message(message: String) -> void:
 func _on_fight_pressed() -> void:
     if is_instance_valid(conflict_manager):
         conflict_manager.player_attack()
+
+func _on_weapon_cycle_pressed() -> void:
+    if is_instance_valid(conflict_manager):
+        conflict_manager.cycle_weapon()
 
 func trigger_player_arrest() -> void:
     if selected_mode != "histoire" or not is_instance_valid(mission_manager) or not mission_manager.is_mission_active():
@@ -2449,7 +2467,12 @@ func _update_nearby_npc_hint() -> void:
     if not is_instance_valid(action_button) or not is_instance_valid(player):
         return
     if is_instance_valid(fight_button) and is_instance_valid(conflict_manager):
-        fight_button.visible = not vehicle_occupied and not public_transport_occupied and conflict_manager.get_nearest_rival_distance() <= 2.8
+        var rival_distance := conflict_manager.get_nearest_rival_distance()
+        var can_fight := not vehicle_occupied and not public_transport_occupied and rival_distance <= conflict_manager.get_weapon_range()
+        fight_button.visible = can_fight
+        fight_button.text = "ATTAQUER — " + conflict_manager.get_weapon_label()
+        weapon_button.visible = not vehicle_occupied and not public_transport_occupied and rival_distance <= 10.0
+        weapon_button.text = "ARME : " + conflict_manager.get_weapon_label()
     if public_transport_occupied:
         action_button.text = "EN VOYAGE"
         return
