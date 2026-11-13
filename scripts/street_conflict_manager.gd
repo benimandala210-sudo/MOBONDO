@@ -2,6 +2,7 @@ extends Node
 ## Affrontements de rue non graphiques : détection, coups, dégâts et conséquences.
 signal conflict_message(message: String)
 
+const MEMORY_PATH := "user://mobondo_rival_memory.json"
 var player: Node3D
 var needs_manager
 var reputation_manager
@@ -9,6 +10,8 @@ var active := false
 var player_cooldown := 0.0
 var rivals: Array[Node3D] = []
 var rival_cooldowns: Dictionary = {}
+var retaliation_memory: Dictionary = {}
+var retaliation_save_timer := 0.0
 var weapon_order := ["machette", "pierre", "lame"]
 var selected_weapon := "machette"
 var stones_remaining := 8
@@ -17,6 +20,9 @@ var weapon_specs := {
     "pierre": {"label": "PIERRE", "range": 8.0, "damage": 1, "cooldown": 1.25},
     "lame": {"label": "GILETTE", "range": 1.8, "damage": 1, "cooldown": 0.65}
 }
+
+func _ready() -> void:
+    _load_retaliation_memory()
 
 func configure(player_node: Node3D, needs_node, reputation_node) -> void:
     player = player_node
@@ -145,6 +151,8 @@ func player_attack() -> bool:
     return true
 
 func _alert_group(group_id: String) -> void:
+    retaliation_memory[group_id] = maxf(float(retaliation_memory.get(group_id, 0.0)), 30.0)
+    _save_retaliation_memory()
     for rival in rivals:
         if not is_instance_valid(rival) or not rival.visible:
             continue
@@ -157,6 +165,12 @@ func _alert_group(group_id: String) -> void:
 func _process(delta: float) -> void:
     if player_cooldown > 0.0:
         player_cooldown = maxf(0.0, player_cooldown - delta)
+    for group_id in retaliation_memory.keys():
+        retaliation_memory[group_id] = maxf(0.0, float(retaliation_memory[group_id]) - delta)
+    retaliation_save_timer += delta
+    if retaliation_save_timer >= 5.0:
+        retaliation_save_timer = 0.0
+        _save_retaliation_memory()
     if not active or not is_instance_valid(player) or not player.visible:
         return
     for i in range(rivals.size() - 1, -1, -1):
@@ -168,14 +182,18 @@ func _process(delta: float) -> void:
         var cooldown := maxf(0.0, float(rival_cooldowns.get(key, 0.0)) - delta)
         rival_cooldowns[key] = cooldown
         var distance := _distance_to_player(rival)
-        var alert_time := maxf(0.0, float(rival.get_meta("alert_time", 0.0)) - delta)
+        var group_id := str(rival.get_meta("group_id", "groupe_mapela"))
+        var group_grudge := float(retaliation_memory.get(group_id, 0.0))
+        var alert_time := maxf(maxf(0.0, float(rival.get_meta("alert_time", 0.0)) - delta), group_grudge)
         rival.set_meta("alert_time", alert_time)
-        var alerted := bool(rival.get_meta("group_alerted", false))
+        var alerted := bool(rival.get_meta("group_alerted", false)) or group_grudge > 0.0
+        if alerted:
+            rival.set_meta("group_alerted", true)
         if not alerted and distance <= 3.5:
             _alert_group(str(rival.get_meta("group_id", "groupe_mapela")))
             alerted = true
             alert_time = 15.0
-        if alerted and (alert_time <= 0.0 or distance > 18.0):
+        if alerted and alert_time <= 0.0:
             rival.set_meta("group_alerted", false)
             rival.set_meta("state", "idle")
             alerted = false
@@ -192,6 +210,28 @@ func _process(delta: float) -> void:
             conflict_message.emit("%s t'a frappé. Santé diminuée." % rival.name)
         elif not alerted:
             rival.set_meta("state", "idle")
+
+func _save_retaliation_memory() -> void:
+    var file := FileAccess.open(MEMORY_PATH, FileAccess.WRITE)
+    if file == null:
+        return
+    file.store_string(JSON.stringify({"groups": retaliation_memory}))
+    file.close()
+
+func _load_retaliation_memory() -> void:
+    if not FileAccess.file_exists(MEMORY_PATH):
+        return
+    var file := FileAccess.open(MEMORY_PATH, FileAccess.READ)
+    if file == null:
+        return
+    var parsed = JSON.parse_string(file.get_as_text())
+    file.close()
+    if typeof(parsed) != TYPE_DICTIONARY:
+        return
+    var groups = parsed.get("groups", {})
+    if groups is Dictionary:
+        for group_id in groups:
+            retaliation_memory[str(group_id)] = clampf(float(groups[group_id]), 0.0, 30.0)
 
 func _distance_to_player(rival: Node3D) -> float:
     return Vector2(rival.global_position.x - player.global_position.x, rival.global_position.z - player.global_position.z).length()
