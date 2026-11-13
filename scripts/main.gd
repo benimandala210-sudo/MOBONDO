@@ -56,6 +56,7 @@ var action_button: Button
 var crime_button: Button
 var street_action_cooldown := 0.0
 var street_incident_cooldown := 0.0
+var npc_memory_cooldowns: Dictionary = {}
 var transport_panel: PanelContainer
 var transport_vehicle: Node3D
 var public_transport_occupied := false
@@ -170,6 +171,8 @@ func _process(delta: float) -> void:
     _animate_street_life(delta)
     street_action_cooldown = maxf(0.0, street_action_cooldown - delta)
     street_incident_cooldown = maxf(0.0, street_incident_cooldown - delta)
+    for character_id in npc_memory_cooldowns.keys():
+        npc_memory_cooldowns[character_id] = maxf(0.0, float(npc_memory_cooldowns[character_id]) - delta)
     if is_instance_valid(crime_button):
         crime_button.disabled = street_action_cooldown > 0.0
     if is_instance_valid(police_manager):
@@ -1833,7 +1836,6 @@ func _trigger_pedestrian_conflict_reactions() -> void:
     var incident_position := player.global_position
     var witness_count := 0
     var reporter_count := 0
-    var remembered_witnesses: Array[String] = []
     for i in range(pedestrian_nodes.size()):
         var person := pedestrian_nodes[i]
         if not is_instance_valid(person) or not person.visible:
@@ -1842,8 +1844,6 @@ func _trigger_pedestrian_conflict_reactions() -> void:
         if distance > 14.0:
             continue
         witness_count += 1
-        if person.has_meta("character_id"):
-            remembered_witnesses.append(str(person.get_meta("character_id")))
         var role := str(person.get_meta("role", "resident"))
         var reaction := "watch"
         var duration := 2.8
@@ -1870,9 +1870,7 @@ func _trigger_pedestrian_conflict_reactions() -> void:
             var toward_player := incident_position - person.global_position
             if Vector2(toward_player.x, toward_player.z).length() > 0.05:
                 person.rotation.y = atan2(-toward_player.x, -toward_player.z)
-    if is_instance_valid(dialogue_manager):
-        for character_id in remembered_witnesses:
-            dialogue_manager.record_npc_incident(character_id, "fight", 1)
+    _record_npc_witness_memories(incident_position, 14.0, "fight")
     if street_incident_cooldown <= 0.0 and is_instance_valid(reputation_manager):
         reputation_manager.record_offense("fight", witness_count > 0)
         street_incident_cooldown = 10.0
@@ -1882,6 +1880,20 @@ func _trigger_pedestrian_conflict_reactions() -> void:
         status_label.text = "Bato ya quartier bamoni mobulu. Basusu bazali kokima."
     elif is_instance_valid(status_label):
         status_label.text = "Affrontement sans témoin direct."
+
+func _record_npc_witness_memories(origin: Vector3, radius: float, incident_type: String) -> void:
+    if not is_instance_valid(dialogue_manager):
+        return
+    for person in pedestrian_nodes:
+        if not is_instance_valid(person) or not person.visible or not person.has_meta("character_id"):
+            continue
+        if person.global_position.distance_to(origin) > radius:
+            continue
+        var character_id := str(person.get_meta("character_id"))
+        if float(npc_memory_cooldowns.get(character_id, 0.0)) > 0.0:
+            continue
+        dialogue_manager.record_npc_incident(character_id, incident_type, 1)
+        npc_memory_cooldowns[character_id] = 10.0
 
 func _update_fearful_npc_avoidance(delta: float) -> void:
     if menu_active or not is_instance_valid(player) or not player.visible or vehicle_occupied or public_transport_occupied or not is_instance_valid(dialogue_manager):
@@ -1896,12 +1908,10 @@ func _update_fearful_npc_avoidance(delta: float) -> void:
         var fear := int(social_state.get("fear", 0))
         if fear < 45:
             continue
-        var distance := person.global_position.distance_to(player.global_position)
-        if distance > 4.2 or distance < 0.1:
-            continue
         var cooldown := maxf(0.0, float(person.get_meta("fear_avoid_cooldown", 0.0)) - delta)
         person.set_meta("fear_avoid_cooldown", cooldown)
-        if cooldown > 0.0:
+        var distance := person.global_position.distance_to(player.global_position)
+        if distance > 4.2 or distance < 0.1 or cooldown > 0.0:
             continue
         person.set_meta("reaction_state", "avoid_player")
         person.set_meta("reaction_timer", 1.25 if fear >= 65 else 0.8)
@@ -2664,6 +2674,8 @@ func _steal_nearby_vehicle(target: Node3D) -> void:
     if not is_instance_valid(reputation_manager) or not reputation_manager.record_offense("vehicle_theft", witnessed):
         status_label.text = "Vol impossible pour le moment."
         return
+    if witnessed:
+        _record_npc_witness_memories(target.global_position, 12.0, "vehicle_theft")
     var stolen_type := str(target.get_meta("vehicle_type", "moto"))
     var stolen_controller := _create_vehicle_controller(stolen_type, target.global_position)
     if not is_instance_valid(stolen_controller):
@@ -2804,7 +2816,11 @@ func _try_talk_to_nearby_npc() -> bool:
             status_label.text = dialogue_manager.get_refusal_message(closest_id)
         return true
     var opening_override := ""
-    if is_instance_valid(reputation_manager):
+    if is_instance_valid(dialogue_manager):
+        var social_state := dialogue_manager.get_npc_social_state(closest_id)
+        if int(social_state.get("fear", 0)) >= 35 or int(social_state.get("hostility", 0)) >= 20:
+            opening_override = dialogue_manager.get_social_opening(closest_id, "")
+    if opening_override.is_empty() and is_instance_valid(reputation_manager):
         if reputation_manager.wanted_level >= 3:
             opening_override = "Ndeko, tika ngai na kimia. Nayoki ete PNC ezali koluka yo. Nakoki kokota na makambo wana te."
         elif reputation_manager.street_reputation >= 60:
