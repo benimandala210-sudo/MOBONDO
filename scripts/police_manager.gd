@@ -36,6 +36,9 @@ func configure(player_ref: CharacterBody3D, reputation_ref: Node, arrest_action:
     _create_patrol_officers()
     _create_motorized_patrol()
 
+func set_vehicle_target(vehicle_ref: Node3D) -> void:
+    vehicle_target = vehicle_ref
+
 func set_active(value: bool) -> void:
     active = value
     if not active:
